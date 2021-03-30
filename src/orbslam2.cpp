@@ -8,7 +8,7 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core/core.hpp>
-#include <System.h>
+#include <ORB_SLAM2/System.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -30,67 +30,12 @@ public:
     video_qos.keep_last(10);
     video_qos.best_effort();
     video_qos.durability_volatile();
-
-    if (sensorType != ORB_SLAM2::System::STEREO && sensorType != ORB_SLAM2::System::RGBD)
-    {
-      irLeftSubscription_ = this->create_subscription<sensor_msgs::msg::Image>(
-        "/camera/infra1/image_rect_raw", video_qos, std::bind(&ORBSLAM2Subscriber::irLeft_callback, this, _1)
-      );
-    }
-
-    if (this->sensorType == ORB_SLAM2::System::IMU_STEREO)
-    {
-      irRightSubscription_ = this->create_subscription<sensor_msgs::msg::Image>(
-        "/camera/infra2/image_rect_raw", video_qos, std::bind(&ORBSLAM2Subscriber::irRight_callback, this, _1)
-      );
-    }
   }
-
-  void runSLAM();
 
 private:
-  void irLeft_callback(const sensor_msgs::msg::Image::SharedPtr msg)
-  {
-    std::lock_guard<std::mutex> lock{mBufMutexLeft};
-    std::cout << "ir" << std::endl;
-    if (!imgLeftBuf.empty())
-      imgLeftBuf.pop();
-    imgLeftBuf.push(msg);
-  }
-
-  void irRight_callback(const sensor_msgs::msg::Image::SharedPtr msg)
-  {
-    std::lock_guard<std::mutex> lock{mBufMutexRight};
-    if (!imgRightBuf.empty())
-      imgRightBuf.pop();
-    imgRightBuf.push(msg);
-  }
-
-  void imuSLAM();
-
-  // Subscriptions
-  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imuSubscription_;
-  rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr irLeftSubscription_;
-  rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr irRightSubscription_;
-  // rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depthSubscription_;
-
-  // Queues
-  std::queue<sensor_msgs::msg::Imu::SharedPtr> imuBuf;
-  std::queue<sensor_msgs::msg::Image::SharedPtr> imgLeftBuf, imgRightBuf;
-
-  // Mutex
-  std::mutex mBufMutex;
-  std::mutex mBufMutexLeft, mBufMutexRight;
-
   ORB_SLAM2::System* mpSLAM;
   ORB_SLAM2::System::eSensor sensorType;
 };
-
-void ORBSLAM2Subscriber::runSLAM()
-{
-//   if (this->sensorType == ORB_SLAM2::System::IMU_STEREO || this->sensorType == ORB_SLAM2::System::IMU_RGBD)
-//     imuSLAM();
-}
 
 class ImageGrabber
 {
