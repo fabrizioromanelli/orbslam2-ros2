@@ -15,8 +15,6 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-#define MAX_IMU_BUFFER 7
-
 using std::placeholders::_1;
 
 class ORBSLAM2Subscriber : public rclcpp::Node
