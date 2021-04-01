@@ -1,7 +1,3 @@
-#include <functional>
-#include <queue>
-#include <thread>
-#include <mutex>
 #include <memory>
 #include <chrono>
 #include <sensor_msgs/msg/imu.hpp>
@@ -9,35 +5,53 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core/core.hpp>
 #include <ORB_SLAM2/System.h>
-#include <message_filters/subscriber.h>
-#include <message_filters/time_synchronizer.h>
-#include <message_filters/sync_policies/approximate_time.h>
+#include "rmw/qos_profiles.h"
+#include "std_msgs/msg/string.hpp"
+
+rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
 
 #include "rclcpp/rclcpp.hpp"
 
 using std::placeholders::_1;
+using namespace std::chrono_literals;
 
 class ORBSLAM2Subscriber : public rclcpp::Node
 {
-public:
+  public:
+    ORBSLAM2Subscriber(ORB_SLAM2::System* pSLAM, ORB_SLAM2::System::eSensor _sensorType)
+    : Node("orbslam2_to_realsense_subscriber"), mpSLAM(pSLAM), sensorType(_sensorType)
+    {
+      auto qos = rclcpp::QoS(
+      rclcpp::QoSInitialization(
+        qos_profile.history,
+        qos_profile.depth
+      ),
+      qos_profile);
+      publisher_ = this->create_publisher<std_msgs::msg::String>("orbslam2_pose", qos);
+          timer_ = this->create_wall_timer(500ms, std::bind(&ORBSLAM2Subscriber::timer_callback, this));
+    }
 
-  ORBSLAM2Subscriber(ORB_SLAM2::System* pSLAM, ORB_SLAM2::System::eSensor _sensorType)
-  : Node("orbslam2_to_realsense_subscriber"), mpSLAM(pSLAM), sensorType(_sensorType)
-  {
-    rclcpp::QoS video_qos(10);
-    video_qos.keep_last(10);
-    video_qos.best_effort();
-    video_qos.durability_volatile();
-  }
+  private:
+    ORB_SLAM2::System* mpSLAM;
+    ORB_SLAM2::System::eSensor sensorType;
+    rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
+    cv::Mat orbslam2Pose;
 
-private:
-  ORB_SLAM2::System* mpSLAM;
-  ORB_SLAM2::System::eSensor sensorType;
+    // Methods
+    void timer_callback()
+    {
+      auto message = std_msgs::msg::String();
+      std::cout << orbslam2Pose << std::endl << std::flush;
+      message.data = "Publishing "; // + std::to_string("a");
+      RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
+      publisher_->publish(message);
+    }
 };
 
 class ImageGrabber
 {
-public:
+  public:
     ImageGrabber(ORB_SLAM2::System* pSLAM):mpSLAM(pSLAM){}
 
     void GrabRGBD(const sensor_msgs::msg::Image::SharedPtr& msgRGB, const sensor_msgs::msg::Image::SharedPtr& msgD);
@@ -48,69 +62,69 @@ public:
 
 void ImageGrabber::GrabRGBD(const sensor_msgs::msg::Image::SharedPtr& msgRGB, const sensor_msgs::msg::Image::SharedPtr& msgD)
 {
-    // Copy the ros image message to cv::Mat.
-    cv_bridge::CvImageConstPtr cv_ptrRGB;
-    try
-    {
-        cv_ptrRGB = cv_bridge::toCvShare(msgRGB);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-        return;
-    }
+  // Copy the ros image message to cv::Mat.
+  cv_bridge::CvImageConstPtr cv_ptrRGB;
+  try
+  {
+    cv_ptrRGB = cv_bridge::toCvShare(msgRGB);
+  }
+  catch (cv_bridge::Exception& e)
+  {
+    return;
+  }
 
-    cv_bridge::CvImageConstPtr cv_ptrD;
-    try
-    {
-        cv_ptrD = cv_bridge::toCvShare(msgD);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-        return;
-    }
+  cv_bridge::CvImageConstPtr cv_ptrD;
+  try
+  {
+    cv_ptrD = cv_bridge::toCvShare(msgD);
+  }
+  catch (cv_bridge::Exception& e)
+  {
+    return;
+  }
 
-    rclcpp::Time Ts = cv_ptrRGB->header.stamp;
-    mpSLAM->TrackRGBD(cv_ptrRGB->image, cv_ptrD->image, Ts.seconds());
+  rclcpp::Time Ts = cv_ptrRGB->header.stamp;
+  orbslam2Pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, cv_ptrD->image, Ts.seconds());
 }
 
 void ImageGrabber::GrabStereo(const sensor_msgs::msg::Image::SharedPtr& msgLeft, const sensor_msgs::msg::Image::SharedPtr& msgRight)
 {
-    // Copy the ros image message to cv::Mat.
-    cv_bridge::CvImageConstPtr cv_ptrLeft;
-    try
-    {
-        cv_ptrLeft = cv_bridge::toCvShare(msgLeft);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-        return;
-    }
+  // Copy the ros image message to cv::Mat.
+  cv_bridge::CvImageConstPtr cv_ptrLeft;
+  try
+  {
+    cv_ptrLeft = cv_bridge::toCvShare(msgLeft);
+  }
+  catch (cv_bridge::Exception& e)
+  {
+    return;
+  }
 
-    cv_bridge::CvImageConstPtr cv_ptrRight;
-    try
-    {
-        cv_ptrRight = cv_bridge::toCvShare(msgRight);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-        return;
-    }
+  cv_bridge::CvImageConstPtr cv_ptrRight;
+  try
+  {
+    cv_ptrRight = cv_bridge::toCvShare(msgRight);
+  }
+  catch (cv_bridge::Exception& e)
+  {
+    return;
+  }
 
-    rclcpp::Time Ts = cv_ptrLeft->header.stamp;
-    mpSLAM->TrackStereo(cv_ptrLeft->image, cv_ptrRight->image, Ts.seconds());
+  rclcpp::Time Ts = cv_ptrLeft->header.stamp;
+  orbslam2Pose = mpSLAM->TrackStereo(cv_ptrLeft->image, cv_ptrRight->image, Ts.seconds());
 }
 
 enum string_code {
-    eStereo,
-    eRGBD,
-    eIRD
+  eStereo,
+  eRGBD,
+  eIRD
 };
 
 string_code hashit (std::string const& inString) {
-    if (inString == "STEREO") return eStereo;
-    if (inString == "RGBD") return eRGBD;
-    if (inString == "IRD") return eIRD;
-    return eStereo;
+  if (inString == "STEREO") return eStereo;
+  if (inString == "RGBD") return eRGBD;
+  if (inString == "IRD") return eIRD;
+  return eStereo;
 }
 
 int main(int argc, char * argv[])
