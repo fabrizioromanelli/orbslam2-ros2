@@ -1,10 +1,12 @@
 #include <memory>
 #include <chrono>
+#include <mutex>
+#include <Eigen/Geometry>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core/core.hpp>
 #include <ORB_SLAM2/System.h>
 #include "rmw/qos_profiles.h"
-#include "std_msgs/msg/string.hpp"
+#include "geometry_msgs/msg/pose.hpp"
 #include "std_msgs/msg/int32.hpp"
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
@@ -20,7 +22,7 @@ class ORBSLAM2Node : public rclcpp::Node
 {
   public:
     ORBSLAM2Node(ORB_SLAM2::System* pSLAM, ORB_SLAM2::System::eSensor _sensorType)
-    : Node("orbslam2_to_realsense_subscriber"), mpSLAM(pSLAM), sensorType(_sensorType)
+    : Node("orbslam2"), mpSLAM(pSLAM), sensorType(_sensorType)
     {
       auto qos = rclcpp::QoS(
       rclcpp::QoSInitialization(
@@ -29,8 +31,8 @@ class ORBSLAM2Node : public rclcpp::Node
       ),
       qos_profile);
 
-      // Create publishers with 100ms frequency
-      pose_publisher_  = this->create_publisher<std_msgs::msg::String>("orbslam2_pose", qos);
+      // Create publishers with 100ms period
+      pose_publisher_  = this->create_publisher<geometry_msgs::msg::Pose>("orbslam2_pose", qos);
           pose_timer_  = this->create_wall_timer(100ms, std::bind(&ORBSLAM2Node::timer_pose_callback, this));
       state_publisher_ = this->create_publisher<std_msgs::msg::Int32>("orbslam2_state", qos);
           state_timer_ = this->create_wall_timer(100ms, std::bind(&ORBSLAM2Node::timer_state_callback, this));
@@ -46,35 +48,64 @@ class ORBSLAM2Node : public rclcpp::Node
     ORB_SLAM2::System* mpSLAM;
     ORB_SLAM2::System::eSensor sensorType;
     rclcpp::TimerBase::SharedPtr pose_timer_, state_timer_;
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pose_publisher_;
+    rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr pose_publisher_;
     rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr state_publisher_;
-    cv::Mat orbslam2Pose;
+    cv::Mat orbslam2Pose = cv::Mat::eye(4,4,CV_32F);
     signed int orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
+    std::mutex poseMtx;
+    std::mutex stateMtx;
 };
 
 void ORBSLAM2Node::setPose(cv::Mat _pose)
 {
+  poseMtx.lock();
   orbslam2Pose = _pose;
+  poseMtx.unlock();
 }
 
 void ORBSLAM2Node::setState(signed int _state)
 {
+  stateMtx.lock();
   orbslam2State = _state;
+  stateMtx.unlock();
 }
 
 void ORBSLAM2Node::timer_pose_callback()
 {
-  auto message = std_msgs::msg::String();
-  std::cout << orbslam2Pose << std::endl << std::flush;
-  message.data = "Publishing "; // + std::to_string("a");
-  RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
+  geometry_msgs::msg::Pose message = geometry_msgs::msg::Pose();
+  poseMtx.lock();
+  if (orbslam2Pose.empty())
+  {
+    orbslam2Pose = cv::Mat::eye(4,4,CV_32F);
+  }
+  message.position.x = orbslam2Pose.at<float>(0,3);
+  message.position.y = orbslam2Pose.at<float>(1,3);
+  message.position.z = orbslam2Pose.at<float>(2,3);
+  Eigen::Matrix3f orMat;
+  orMat(0,0) = orbslam2Pose.at<float>(0,0);
+  orMat(0,1) = orbslam2Pose.at<float>(0,1);
+  orMat(0,2) = orbslam2Pose.at<float>(0,2);
+  orMat(1,0) = orbslam2Pose.at<float>(1,0);
+  orMat(1,1) = orbslam2Pose.at<float>(1,1);
+  orMat(1,2) = orbslam2Pose.at<float>(1,2);
+  orMat(2,0) = orbslam2Pose.at<float>(2,0);
+  orMat(2,1) = orbslam2Pose.at<float>(2,1);
+  orMat(2,2) = orbslam2Pose.at<float>(2,2);
+  poseMtx.unlock();
+  Eigen::Quaternionf q(orMat);
+  message.orientation.x = q.x();
+  message.orientation.y = q.y();
+  message.orientation.z = q.z();
+  message.orientation.w = q.w();
   pose_publisher_->publish(message);
 }
 
 void ORBSLAM2Node::timer_state_callback()
 {
   auto message = std_msgs::msg::Int32();
+  stateMtx.lock();
   message.data = orbslam2State;
+  stateMtx.unlock();
   state_publisher_->publish(message);
 }
 

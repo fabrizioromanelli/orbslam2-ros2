@@ -13,6 +13,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(realsense2_camera_msgs REQUIRED)
 find_package(realsense2_description REQUIRED)
@@ -29,10 +30,10 @@ set(LIBS
 -lboost_system
 )
 
-add_executable(orbslam2 src/orbslam2.cpp)
-ament_target_dependencies(orbslam2 rclcpp std_msgs sensor_msgs realsense2_camera_msgs realsense2_description realsense2_camera Eigen3 Pangolin)
+add_executable(${PROJECT_NAME} src/orbslam2.cpp)
+ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs sensor_msgs realsense2_camera_msgs realsense2_description realsense2_camera Eigen3 Pangolin)
 
-target_link_libraries(orbslam2 ${LIBS})
+target_link_libraries(${PROJECT_NAME} ${LIBS})
 
 install(DIRECTORY 
     launch
@@ -40,7 +41,7 @@ install(DIRECTORY
     )
 
 install(TARGETS
-  orbslam2
+${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
