@@ -24,12 +24,7 @@ class ORBSLAM2Node : public rclcpp::Node
     ORBSLAM2Node(ORB_SLAM2::System* pSLAM, ORB_SLAM2::System::eSensor _sensorType)
     : Node("orbslam2"), mpSLAM(pSLAM), sensorType(_sensorType)
     {
-      auto qos = rclcpp::QoS(
-      rclcpp::QoSInitialization(
-        qos_profile.history,
-        qos_profile.depth
-      ),
-      qos_profile);
+      auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, qos_profile.depth), qos_profile);
 
       // Create publishers with 100ms period
       pose_publisher_  = this->create_publisher<geometry_msgs::msg::Pose>("orbslam2_pose", qos);
