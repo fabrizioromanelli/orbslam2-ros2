@@ -217,19 +217,19 @@ int main(int argc, char * argv[])
   {
     if (irDepth)
     {
-      s1 = "/camera/infra1/image_rect_raw";
-      s2 = "/camera/aligned_depth_to_infra1/image_raw";
+      s1 = "/vslam/infra1/image_rect_raw";
+      s2 = "/vslam/aligned_depth_to_infra1/image_raw";
     }
     else
     {
-      s1 = "/camera/color/image_raw";
-      s2 = "/camera/aligned_depth_to_color/image_raw";
+      s1 = "/vslam/color/image_raw";
+      s2 = "/vslam/aligned_depth_to_color/image_raw";
     }
   }
   else if (sensorType == ORB_SLAM2::System::STEREO)
   {
-      s1 = "/camera/infra1/image_rect_raw";
-      s2 = "/camera/infra2/image_rect_raw";
+      s1 = "/vslam/infra1/image_rect_raw";
+      s2 = "/vslam/infra2/image_rect_raw";
   }
 
   message_filters::Subscriber<sensor_msgs::msg::Image> stream1_sub(nodePtr.get(), s1, rmw_qos_profile_sensor_data);
