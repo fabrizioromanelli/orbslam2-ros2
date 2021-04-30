@@ -73,9 +73,17 @@ void ORBSLAM2Node::timer_pose_callback()
   {
     orbslam2Pose = cv::Mat::eye(4,4,CV_32F);
   }
-  message.position.x = orbslam2Pose.at<float>(0,3);
-  message.position.y = orbslam2Pose.at<float>(1,3);
-  message.position.z = orbslam2Pose.at<float>(2,3);
+
+  cv::Mat Rwc = orbslam2Pose.rowRange(0,3).colRange(0,3).t();
+  cv::Mat Twc = -Rwc*orbslam2Pose.rowRange(0,3).col(3);
+
+  // This is the correct position!!!
+  message.position.x = Twc.at<float>(0,3);
+  message.position.y = Twc.at<float>(1,3);
+  message.position.z = Twc.at<float>(2,3);
+  // message.position.x = orbslam2Pose.at<float>(0,3);
+  // message.position.y = orbslam2Pose.at<float>(1,3);
+  // message.position.z = orbslam2Pose.at<float>(2,3);
   Eigen::Matrix3f orMat;
   orMat(0,0) = orbslam2Pose.at<float>(0,0);
   orMat(0,1) = orbslam2Pose.at<float>(0,1);
