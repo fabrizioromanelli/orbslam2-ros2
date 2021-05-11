@@ -13,6 +13,10 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include "rclcpp/rclcpp.hpp"
 
+// Includes for PX4
+#include <px4_msgs/msg/timesync.hpp>
+#include <px4_msgs/msg/vehicle_visual_odometry.hpp>
+
 rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
 
 using std::placeholders::_1;
@@ -26,9 +30,9 @@ class ORBSLAM2Node : public rclcpp::Node
     {
       auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, qos_profile.depth), qos_profile);
 
-      // Create publishers with 100ms period
-      pose_publisher_  = this->create_publisher<geometry_msgs::msg::Pose>("orbslam2_pose", qos);
-          pose_timer_  = this->create_wall_timer(100ms, std::bind(&ORBSLAM2Node::timer_pose_callback, this));
+      // Create publishers with 50ms period for pose and 100ms period for state
+      pose_publisher_  = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 10);
+          pose_timer_  = this->create_wall_timer(50ms, std::bind(&ORBSLAM2Node::timer_pose_callback, this));
       state_publisher_ = this->create_publisher<std_msgs::msg::Int32>("orbslam2_state", qos);
           state_timer_ = this->create_wall_timer(100ms, std::bind(&ORBSLAM2Node::timer_state_callback, this));
     }
