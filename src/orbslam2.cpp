@@ -14,8 +14,8 @@
 #include "rclcpp/rclcpp.hpp"
 
 // Includes for PX4
-//#include <px4_msgs/msg/timesync.hpp>
-//#include <px4_msgs/msg/vehicle_visual_odometry.hpp>
+#include <px4_msgs/msg/timesync.hpp>
+#include <px4_msgs/msg/vehicle_visual_odometry.hpp>
 
 rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
 
@@ -31,7 +31,7 @@ class ORBSLAM2Node : public rclcpp::Node
       auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, qos_profile.depth), qos_profile);
 
       // Create publishers with 50ms period for pose and 100ms period for state
-      //pose_publisher_  = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 10);
+      pose_publisher_  = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 10);
           pose_timer_  = this->create_wall_timer(50ms, std::bind(&ORBSLAM2Node::timer_pose_callback, this));
       state_publisher_ = this->create_publisher<std_msgs::msg::Int32>("orbslam2_state", qos);
           state_timer_ = this->create_wall_timer(100ms, std::bind(&ORBSLAM2Node::timer_state_callback, this));
@@ -47,7 +47,7 @@ class ORBSLAM2Node : public rclcpp::Node
     ORB_SLAM2::System* mpSLAM;
     ORB_SLAM2::System::eSensor sensorType;
     rclcpp::TimerBase::SharedPtr pose_timer_, state_timer_;
-    rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr pose_publisher_;
+    rclcpp::Publisher<px4_msgs::msg::VehicleVisualOdometry>::SharedPtr pose_publisher_;
     rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr state_publisher_;
     cv::Mat orbslam2Pose = cv::Mat::eye(4,4,CV_32F);
     signed int orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
@@ -71,40 +71,42 @@ void ORBSLAM2Node::setState(signed int _state)
 
 void ORBSLAM2Node::timer_pose_callback()
 {
-  // geometry_msgs::msg::Pose message = geometry_msgs::msg::Pose();
-  // poseMtx.lock();
-  // if (orbslam2Pose.empty())
-  // {
-  //   orbslam2Pose = cv::Mat::eye(4,4,CV_32F);
-  // }
+  px4_msgs::msg::VehicleVisualOdometry message = px4_msgs::msg::VehicleVisualOdometry();
 
-  // cv::Mat Rwc = orbslam2Pose.rowRange(0,3).colRange(0,3).t();
-  // cv::Mat Twc = -Rwc*orbslam2Pose.rowRange(0,3).col(3);
+  message.local_frame = 0; // NED earth-fixed frame
 
-  // // This is the correct position!!!
-  // message.position.x = Twc.at<float>(0,3);
-  // message.position.y = Twc.at<float>(1,3);
-  // message.position.z = Twc.at<float>(2,3);
-  // // message.position.x = orbslam2Pose.at<float>(0,3);
-  // // message.position.y = orbslam2Pose.at<float>(1,3);
-  // // message.position.z = orbslam2Pose.at<float>(2,3);
-  // Eigen::Matrix3f orMat;
-  // orMat(0,0) = orbslam2Pose.at<float>(0,0);
-  // orMat(0,1) = orbslam2Pose.at<float>(0,1);
-  // orMat(0,2) = orbslam2Pose.at<float>(0,2);
-  // orMat(1,0) = orbslam2Pose.at<float>(1,0);
-  // orMat(1,1) = orbslam2Pose.at<float>(1,1);
-  // orMat(1,2) = orbslam2Pose.at<float>(1,2);
-  // orMat(2,0) = orbslam2Pose.at<float>(2,0);
-  // orMat(2,1) = orbslam2Pose.at<float>(2,1);
-  // orMat(2,2) = orbslam2Pose.at<float>(2,2);
-  // poseMtx.unlock();
-  // Eigen::Quaternionf q(orMat);
+  poseMtx.lock();
+  if (orbslam2Pose.empty())
+  {
+    orbslam2Pose = cv::Mat::eye(4,4,CV_32F);
+  }
+
+  cv::Mat Rwc = orbslam2Pose.rowRange(0,3).colRange(0,3).t();
+  cv::Mat Twc = -Rwc*orbslam2Pose.rowRange(0,3).col(3);
+
+  Eigen::Matrix3f orMat;
+  orMat(0,0) = orbslam2Pose.at<float>(0,0);
+  orMat(0,1) = orbslam2Pose.at<float>(0,1);
+  orMat(0,2) = orbslam2Pose.at<float>(0,2);
+  orMat(1,0) = orbslam2Pose.at<float>(1,0);
+  orMat(1,1) = orbslam2Pose.at<float>(1,1);
+  orMat(1,2) = orbslam2Pose.at<float>(1,2);
+  orMat(2,0) = orbslam2Pose.at<float>(2,0);
+  orMat(2,1) = orbslam2Pose.at<float>(2,1);
+  orMat(2,2) = orbslam2Pose.at<float>(2,2);
+  poseMtx.unlock();
+  Eigen::Quaternionf q(orMat);
   // message.orientation.x = q.x();
   // message.orientation.y = q.y();
   // message.orientation.z = q.z();
   // message.orientation.w = q.w();
-  // pose_publisher_->publish(message);
+
+  // Conversion from VSLAM to NED is [x y z]ned = -[z x y]vslam
+  message.x = -Twc.at<float>(2,3);
+  message.y = -Twc.at<float>(0,3);
+  message.z = -Twc.at<float>(1,3);
+
+  pose_publisher_->publish(message);
 }
 
 void ORBSLAM2Node::timer_state_callback()
