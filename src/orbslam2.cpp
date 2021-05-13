@@ -73,6 +73,9 @@ void ORBSLAM2Node::timer_pose_callback()
 {
   px4_msgs::msg::VehicleVisualOdometry message = px4_msgs::msg::VehicleVisualOdometry();
 
+  // TODO from timesync MSGS!!!
+  message.timestamp = 0;
+
   message.local_frame = 0; // NED earth-fixed frame
 
   poseMtx.lock();
@@ -101,10 +104,14 @@ void ORBSLAM2Node::timer_pose_callback()
   // message.orientation.z = q.z();
   // message.orientation.w = q.w();
 
-  // Conversion from VSLAM to NED is [x y z]ned = -[z x y]vslam
-  message.x = -Twc.at<float>(2,3);
-  message.y = -Twc.at<float>(0,3);
-  message.z = -Twc.at<float>(1,3);
+  // Conversion from VSLAM to NED is [x y z]ned = [z x y]vslam
+  message.x = Twc.at<float>(2);
+  message.y = Twc.at<float>(0);
+  message.z = Twc.at<float>(1);
+  message.q[0] = q.x();
+  message.q[1] = q.y();
+  message.q[2] = q.z();
+  message.q[3] = q.w();
 
   pose_publisher_->publish(message);
 }
