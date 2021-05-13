@@ -33,12 +33,12 @@ class ORBSLAM2Node : public rclcpp::Node
       // Create subscriber to the timesync topic of PX4
       // Possible known issue with PX4 timestamp sync. If the following is not working, try to:
       // subscribe to the VehicleOdometry message, copy their timestamp and timestamp_sample to
-      // timesync_.timestamp and then publishe the VehicleVisualOdometry with these timestamps.
+      // timestamp_ and then publishe the VehicleVisualOdometry with these timestamps.
       // Ref: https://discuss.px4.io/t/fastrtps-ros2-foxy-vehicle-visual-odometry-advertiser/19149/5
       ts_subscriber_   = this->create_subscription<px4_msgs::msg::Timesync>(
         "/Timesync_PubSubTopic", 10,
         [this](const px4_msgs::msg::Timesync::UniquePtr msg) {
-        timesync_.timestamp = msg->timestamp;
+          timestamp_.store(msg->timestamp);
       });
 
       // Create publishers with 50ms period for pose and 100ms period for state
@@ -65,7 +65,7 @@ class ORBSLAM2Node : public rclcpp::Node
     signed int orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
     std::mutex poseMtx;
     std::mutex stateMtx;
-    px4_msgs::msg::Timesync timesync_;
+    std::atomic<uint64_t> timestamp_;   //!< common synced timestamped
 };
 
 void ORBSLAM2Node::setPose(cv::Mat _pose)
@@ -86,8 +86,8 @@ void ORBSLAM2Node::timer_pose_callback()
 {
   px4_msgs::msg::VehicleVisualOdometry message = px4_msgs::msg::VehicleVisualOdometry();
 
-  message.timestamp = timesync_.timestamp;
-  message.timestamp_sample = timesync_.timestamp;
+  message.timestamp = timestamp_.load();
+  message.timestamp_sample = timestamp_.load();
 
   message.local_frame              = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_FRD; // FRD earth-fixed frame, arbitrary heading reference
   message.velocity_frame           = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_FRD;
