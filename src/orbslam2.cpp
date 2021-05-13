@@ -30,6 +30,17 @@ class ORBSLAM2Node : public rclcpp::Node
     {
       auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, qos_profile.depth), qos_profile);
 
+      // Create subscriber to the timesync topic of PX4
+      // Possible known issue with PX4 timestamp sync. If the following is not working, try to:
+      // subscribe to the VehicleOdometry message, copy their timestamp and timestamp_sample to
+      // timesync_.timestamp and then publishe the VehicleVisualOdometry with these timestamps.
+      // Ref: https://discuss.px4.io/t/fastrtps-ros2-foxy-vehicle-visual-odometry-advertiser/19149/5
+      ts_subscriber_   = this->create_subscription<px4_msgs::msg::Timesync>(
+        "/Timesync_PubSubTopic", 10,
+        [this](const px4_msgs::msg::Timesync::UniquePtr msg) {
+        timesync_.timestamp = msg->timestamp;
+      });
+
       // Create publishers with 50ms period for pose and 100ms period for state
       pose_publisher_  = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 10);
           pose_timer_  = this->create_wall_timer(50ms, std::bind(&ORBSLAM2Node::timer_pose_callback, this));
@@ -49,10 +60,12 @@ class ORBSLAM2Node : public rclcpp::Node
     rclcpp::TimerBase::SharedPtr pose_timer_, state_timer_;
     rclcpp::Publisher<px4_msgs::msg::VehicleVisualOdometry>::SharedPtr pose_publisher_;
     rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr state_publisher_;
+    rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr ts_subscriber_;
     cv::Mat orbslam2Pose = cv::Mat::eye(4,4,CV_32F);
     signed int orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
     std::mutex poseMtx;
     std::mutex stateMtx;
+    px4_msgs::msg::Timesync timesync_;
 };
 
 void ORBSLAM2Node::setPose(cv::Mat _pose)
@@ -73,45 +86,56 @@ void ORBSLAM2Node::timer_pose_callback()
 {
   px4_msgs::msg::VehicleVisualOdometry message = px4_msgs::msg::VehicleVisualOdometry();
 
-  // TODO from timesync MSGS!!!
-  message.timestamp = 0;
+  message.timestamp = timesync_.timestamp;
+  message.timestamp_sample = timesync_.timestamp;
 
-  message.local_frame = 0; // NED earth-fixed frame
+  message.local_frame              = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_FRD; // FRD earth-fixed frame, arbitrary heading reference
+  message.velocity_frame           = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_FRD;
+  message.q_offset[0]              = NAN;
+  message.pose_covariance [0]      = NAN;
+  message.pose_covariance [15]     = NAN;
+  message.vx                       = NAN;
+  message.vy                       = NAN;
+  message.vz                       = NAN;
+  message.rollspeed                = NAN;
+  message.pitchspeed               = NAN;
+  message.yawspeed                 = NAN;
+  message.velocity_covariance [0]  = NAN;
+  message.velocity_covariance [15] = NAN;
 
   poseMtx.lock();
   if (orbslam2Pose.empty())
   {
     orbslam2Pose = cv::Mat::eye(4,4,CV_32F);
+    message.x    = NAN;
+    message.y    = NAN;
+    message.z    = NAN;
+    message.q[0] = NAN;
   }
+  else
+  {
+    cv::Mat Rwc = orbslam2Pose.rowRange(0,3).colRange(0,3).t();
+    cv::Mat Twc = -Rwc*orbslam2Pose.rowRange(0,3).col(3);
 
-  cv::Mat Rwc = orbslam2Pose.rowRange(0,3).colRange(0,3).t();
-  cv::Mat Twc = -Rwc*orbslam2Pose.rowRange(0,3).col(3);
+    Eigen::Matrix3f orMat;
+    orMat(0,0) = orbslam2Pose.at<float>(0,0);
+    orMat(0,1) = orbslam2Pose.at<float>(0,1);
+    orMat(0,2) = orbslam2Pose.at<float>(0,2);
+    orMat(1,0) = orbslam2Pose.at<float>(1,0);
+    orMat(1,1) = orbslam2Pose.at<float>(1,1);
+    orMat(1,2) = orbslam2Pose.at<float>(1,2);
+    orMat(2,0) = orbslam2Pose.at<float>(2,0);
+    orMat(2,1) = orbslam2Pose.at<float>(2,1);
+    orMat(2,2) = orbslam2Pose.at<float>(2,2);
+    Eigen::Quaternionf q(orMat);
 
-  Eigen::Matrix3f orMat;
-  orMat(0,0) = orbslam2Pose.at<float>(0,0);
-  orMat(0,1) = orbslam2Pose.at<float>(0,1);
-  orMat(0,2) = orbslam2Pose.at<float>(0,2);
-  orMat(1,0) = orbslam2Pose.at<float>(1,0);
-  orMat(1,1) = orbslam2Pose.at<float>(1,1);
-  orMat(1,2) = orbslam2Pose.at<float>(1,2);
-  orMat(2,0) = orbslam2Pose.at<float>(2,0);
-  orMat(2,1) = orbslam2Pose.at<float>(2,1);
-  orMat(2,2) = orbslam2Pose.at<float>(2,2);
+    // Conversion from VSLAM to FRD is [x y z]frd = [z x y]vslam
+    message.x = Twc.at<float>(2);
+    message.y = Twc.at<float>(0);
+    message.z = Twc.at<float>(1);
+    message.q = {q.w(), q.z(), q.x(), q.y()};
+  }
   poseMtx.unlock();
-  Eigen::Quaternionf q(orMat);
-  // message.orientation.x = q.x();
-  // message.orientation.y = q.y();
-  // message.orientation.z = q.z();
-  // message.orientation.w = q.w();
-
-  // Conversion from VSLAM to NED is [x y z]ned = [z x y]vslam
-  message.x = Twc.at<float>(2);
-  message.y = Twc.at<float>(0);
-  message.z = Twc.at<float>(1);
-  message.q[0] = q.x();
-  message.q[1] = q.y();
-  message.q[2] = q.z();
-  message.q[3] = q.w();
 
   pose_publisher_->publish(message);
 }
