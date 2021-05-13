@@ -6,7 +6,6 @@
 #include <opencv2/core/core.hpp>
 #include <ORB_SLAM2/System.h>
 #include "rmw/qos_profiles.h"
-#include "geometry_msgs/msg/pose.hpp"
 #include "std_msgs/msg/int32.hpp"
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
