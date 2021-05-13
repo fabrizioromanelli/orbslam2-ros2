@@ -71,40 +71,40 @@ void ORBSLAM2Node::setState(signed int _state)
 
 void ORBSLAM2Node::timer_pose_callback()
 {
-  geometry_msgs::msg::Pose message = geometry_msgs::msg::Pose();
-  poseMtx.lock();
-  if (orbslam2Pose.empty())
-  {
-    orbslam2Pose = cv::Mat::eye(4,4,CV_32F);
-  }
+  // geometry_msgs::msg::Pose message = geometry_msgs::msg::Pose();
+  // poseMtx.lock();
+  // if (orbslam2Pose.empty())
+  // {
+  //   orbslam2Pose = cv::Mat::eye(4,4,CV_32F);
+  // }
 
-  cv::Mat Rwc = orbslam2Pose.rowRange(0,3).colRange(0,3).t();
-  cv::Mat Twc = -Rwc*orbslam2Pose.rowRange(0,3).col(3);
+  // cv::Mat Rwc = orbslam2Pose.rowRange(0,3).colRange(0,3).t();
+  // cv::Mat Twc = -Rwc*orbslam2Pose.rowRange(0,3).col(3);
 
-  // This is the correct position!!!
-  message.position.x = Twc.at<float>(0,3);
-  message.position.y = Twc.at<float>(1,3);
-  message.position.z = Twc.at<float>(2,3);
-  // message.position.x = orbslam2Pose.at<float>(0,3);
-  // message.position.y = orbslam2Pose.at<float>(1,3);
-  // message.position.z = orbslam2Pose.at<float>(2,3);
-  Eigen::Matrix3f orMat;
-  orMat(0,0) = orbslam2Pose.at<float>(0,0);
-  orMat(0,1) = orbslam2Pose.at<float>(0,1);
-  orMat(0,2) = orbslam2Pose.at<float>(0,2);
-  orMat(1,0) = orbslam2Pose.at<float>(1,0);
-  orMat(1,1) = orbslam2Pose.at<float>(1,1);
-  orMat(1,2) = orbslam2Pose.at<float>(1,2);
-  orMat(2,0) = orbslam2Pose.at<float>(2,0);
-  orMat(2,1) = orbslam2Pose.at<float>(2,1);
-  orMat(2,2) = orbslam2Pose.at<float>(2,2);
-  poseMtx.unlock();
-  Eigen::Quaternionf q(orMat);
-  message.orientation.x = q.x();
-  message.orientation.y = q.y();
-  message.orientation.z = q.z();
-  message.orientation.w = q.w();
-  pose_publisher_->publish(message);
+  // // This is the correct position!!!
+  // message.position.x = Twc.at<float>(0,3);
+  // message.position.y = Twc.at<float>(1,3);
+  // message.position.z = Twc.at<float>(2,3);
+  // // message.position.x = orbslam2Pose.at<float>(0,3);
+  // // message.position.y = orbslam2Pose.at<float>(1,3);
+  // // message.position.z = orbslam2Pose.at<float>(2,3);
+  // Eigen::Matrix3f orMat;
+  // orMat(0,0) = orbslam2Pose.at<float>(0,0);
+  // orMat(0,1) = orbslam2Pose.at<float>(0,1);
+  // orMat(0,2) = orbslam2Pose.at<float>(0,2);
+  // orMat(1,0) = orbslam2Pose.at<float>(1,0);
+  // orMat(1,1) = orbslam2Pose.at<float>(1,1);
+  // orMat(1,2) = orbslam2Pose.at<float>(1,2);
+  // orMat(2,0) = orbslam2Pose.at<float>(2,0);
+  // orMat(2,1) = orbslam2Pose.at<float>(2,1);
+  // orMat(2,2) = orbslam2Pose.at<float>(2,2);
+  // poseMtx.unlock();
+  // Eigen::Quaternionf q(orMat);
+  // message.orientation.x = q.x();
+  // message.orientation.y = q.y();
+  // message.orientation.z = q.z();
+  // message.orientation.w = q.w();
+  // pose_publisher_->publish(message);
 }
 
 void ORBSLAM2Node::timer_state_callback()
@@ -219,7 +219,14 @@ int main(int argc, char * argv[])
       break;
   }
 
-  ORB_SLAM2::System SLAM(argv[1], argv[2], sensorType, true);
+  bool display;
+  string dFlag(argv[4]);
+  if (dFlag == "ON")
+    display = true;
+  else
+    display = false;
+
+  ORB_SLAM2::System SLAM(argv[1], argv[2], sensorType, display);
   auto nodePtr = std::make_shared<ORBSLAM2Node>(&SLAM, sensorType);
 
   ImageGrabber igb(&SLAM, nodePtr);

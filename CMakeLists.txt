@@ -10,7 +10,9 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-ADD_DEFINITIONS(-D__ANDROID__)
+if(NOT HOST_COMPILATION)
+  ADD_DEFINITIONS(-D__ANDROID__)
+endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -23,10 +25,14 @@ find_package(realsense2_camera REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
-find_package(CUDA REQUIRED)
+if(NOT HOST_COMPILATION)
+  find_package(CUDA REQUIRED)
 
-include_directories("${CUDA_INCLUDE_DIRS}"
-                    /usr/local/include/ORB_SLAM2)
+  include_directories("${CUDA_INCLUDE_DIRS}"
+                      /usr/local/include/ORB_SLAM2)
+else()
+  include_directories(/usr/local/include/ORB_SLAM2)
+endif()
 
 set(LIBS 
 -lfbow

@@ -9,7 +9,8 @@ def generate_launch_description():
         arguments=[
             "/usr/local/share/ORB_SLAM2/Vocabulary/orb_mur.fbow",
             "/usr/local/share/ORB_SLAM2/Config/RealSense-D435i-IRD.yaml",
-            "IRD"
+            "IRD",
+            "OFF"
         ]
     )
     ])
