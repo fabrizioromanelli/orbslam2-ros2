@@ -37,7 +37,7 @@ class ORBSLAM2Node : public rclcpp::Node
       ts_subscriber_   = this->create_subscription<px4_msgs::msg::Timesync>(
         "/Timesync_PubSubTopic", 10,
         [this](const px4_msgs::msg::Timesync::UniquePtr msg) {
-          timestamp_.store(msg->timestamp);
+          timestamp_.store(msg->timestamp, std::memory_order_release);
       });
 
       // Create publishers with 50ms period for pose and 100ms period for state
@@ -84,9 +84,10 @@ void ORBSLAM2Node::setState(signed int _state)
 void ORBSLAM2Node::timer_pose_callback()
 {
   px4_msgs::msg::VehicleVisualOdometry message = px4_msgs::msg::VehicleVisualOdometry();
+  uint64_t msg_timestamp = timestamp_.load(std::memory_order_acquire);
 
-  message.timestamp = timestamp_.load();
-  message.timestamp_sample = timestamp_.load();
+  message.timestamp = msg_timestamp;
+  message.timestamp_sample = msg_timestamp;
 
   message.local_frame              = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_FRD; // FRD earth-fixed frame, arbitrary heading reference
   message.velocity_frame           = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_FRD;
