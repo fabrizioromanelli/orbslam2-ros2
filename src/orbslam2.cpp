@@ -89,8 +89,8 @@ void ORBSLAM2Node::timer_pose_callback()
   message.timestamp = msg_timestamp;
   message.timestamp_sample = msg_timestamp;
 
-  message.local_frame              = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_FRD; // FRD earth-fixed frame, arbitrary heading reference
-  message.velocity_frame           = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_FRD;
+  message.local_frame              = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_NED; // ! Needs to be investigated further.
+  message.velocity_frame           = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_NED;
   message.q_offset[0]              = NAN;
   message.pose_covariance [0]      = NAN;
   message.pose_covariance [15]     = NAN;
