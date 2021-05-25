@@ -29,22 +29,29 @@ public:
     {
         auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, qos_profile.depth), qos_profile);
 
+        // Create callback groups.
+        timestamp_clbk_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+        state_clbk_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+        vio_clbk_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
         // Create subscriber to the timesync topic of PX4
         // Possible known issue with PX4 timestamp sync. If the following is not working, try to:
         // subscribe to the VehicleOdometry message, copy their timestamp and timestamp_sample to
         // timestamp_ and then publishe the VehicleVisualOdometry with these timestamps.
         // Ref: https://discuss.px4.io/t/fastrtps-ros2-foxy-vehicle-visual-odometry-advertiser/19149/5
+        auto timestamp_sub_opt = rclcpp::SubscriptionOptions();
+        timestamp_sub_opt.callback_group = timestamp_clbk_group_;
         ts_subscriber_ = this->create_subscription<px4_msgs::msg::Timesync>(
-            "/Timesync_PubSubTopic", 10,
-            [this](const px4_msgs::msg::Timesync::UniquePtr msg) {
-                timestamp_.store(msg->timestamp, std::memory_order_release);
-            });
+            "/Timesync_PubSubTopic",
+            10,
+            std::bind(&ORBSLAM2Node::timestamp_callback, this, std::placeholders::_1),
+            timestamp_sub_opt);
 
         // Create publishers with 50ms period for pose and 100ms period for state
         pose_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 10);
-        pose_timer_ = this->create_wall_timer(50ms, std::bind(&ORBSLAM2Node::timer_pose_callback, this));
+        pose_timer_ = this->create_wall_timer(50ms, std::bind(&ORBSLAM2Node::timer_pose_callback, this), vio_clbk_group_);
         state_publisher_ = this->create_publisher<std_msgs::msg::Int32>("orbslam2_state", qos);
-        state_timer_ = this->create_wall_timer(100ms, std::bind(&ORBSLAM2Node::timer_state_callback, this));
+        state_timer_ = this->create_wall_timer(100ms, std::bind(&ORBSLAM2Node::timer_state_callback, this), state_clbk_group_);
     }
 
     void setPose(cv::Mat);
@@ -53,6 +60,11 @@ public:
 private:
     void timer_pose_callback();
     void timer_state_callback();
+    void timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg);
+
+    rclcpp::CallbackGroup::SharedPtr timestamp_clbk_group_;
+    rclcpp::CallbackGroup::SharedPtr state_clbk_group_;
+    rclcpp::CallbackGroup::SharedPtr vio_clbk_group_;
 
     ORB_SLAM2::System *mpSLAM;
     ORB_SLAM2::System::eSensor sensorType;
@@ -66,6 +78,11 @@ private:
     std::mutex stateMtx;
     std::atomic<uint64_t> timestamp_; //!< common synced timestamped
 };
+
+void ORBSLAM2Node::timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg)
+{
+    timestamp_.store(msg->timestamp, std::memory_order_release);
+}
 
 void ORBSLAM2Node::setPose(cv::Mat _pose)
 {
@@ -303,7 +320,7 @@ int main(int argc, char *argv[])
         sync.registerCallback(&ImageGrabber::GrabRGBD, &igb);
     else if (sensorType == ORB_SLAM2::System::STEREO)
         sync.registerCallback(&ImageGrabber::GrabStereo, &igb);
-    
+
     orbslam_mt_executor.add_node(nodePtr);
 
     orbslam_mt_executor.spin();
