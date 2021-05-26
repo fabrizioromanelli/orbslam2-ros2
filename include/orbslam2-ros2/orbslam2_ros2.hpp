@@ -75,7 +75,7 @@ private:
 }
 
 /**
- * @brief Gets frames from the camera.
+ * @brief Gets frames from the camera and calls ORB_SLAM2.
  */
 class ImageGrabber : public rclcpp::Node
 {

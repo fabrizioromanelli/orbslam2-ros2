@@ -87,8 +87,44 @@ void ImageGrabber::GrabRGBD(const const sensor_msgs::msg::Image::SharedPtr &msgR
         return;
     }
 
-    // Call ORB_SLAM2.
+    // Call ORB_SLAM2 and update local data.
     rclcpp::Time Ts = cv_ptrRGB->header.stamp;
     mpORBSLAM2Node->setPose(mpSLAM->TrackRGBD(cv_ptrRGB->image, cv_ptrD->image, Ts.seconds()));
+    mpORBSLAM2Node->setState(mpSLAM->GetTrackingState());
+}
+
+/**
+ * @brief Grabs stereo frames and calls ORB_SLAM2.
+ *
+ * @param msgLeft Pointer to (a pointer to) the left image.
+ * @param msgRight Pointer to (a pointer to) the right image.
+ */
+void ImageGrabber::GrabStereo(const sensor_msgs::msg::Image::SharedPtr &msgLeft,
+                              const sensor_msgs::msg::Image::SharedPtr &msgRight)
+{
+    // Copy the ROS image messages to cv::Mat.
+    cv_bridge::CvImageConstPtr cv_ptrLeft;
+    try
+    {
+        cv_ptrLeft = cv_bridge::toCvShare(msgLeft);
+    }
+    catch (cv_bridge::Exception &e)
+    {
+        return;
+    }
+
+    cv_bridge::CvImageConstPtr cv_ptrRight;
+    try
+    {
+        cv_ptrRight = cv_bridge::toCvShare(msgRight);
+    }
+    catch (cv_bridge::Exception &e)
+    {
+        return;
+    }
+
+    // Call ORB_SLAM2 and update local data.
+    rclcpp::Time Ts = cv_ptrLeft->header.stamp;
+    mpORBSLAM2Node->setPose(mpSLAM->TrackStereo(cv_ptrLeft->image, cv_ptrRight->image, Ts.seconds()));
     mpORBSLAM2Node->setState(mpSLAM->GetTrackingState());
 }

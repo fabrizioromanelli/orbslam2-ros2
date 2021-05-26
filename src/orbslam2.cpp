@@ -4,62 +4,6 @@
 
 #include "../include/orbslam2-ros2/orbslam2_ros2.hpp"
 
-void ImageGrabber::GrabRGBD(const sensor_msgs::msg::Image::SharedPtr &msgRGB, const sensor_msgs::msg::Image::SharedPtr &msgD)
-{
-    // Copy the ros image message to cv::Mat.
-    cv_bridge::CvImageConstPtr cv_ptrRGB;
-    try
-    {
-        cv_ptrRGB = cv_bridge::toCvShare(msgRGB);
-    }
-    catch (cv_bridge::Exception &e)
-    {
-        return;
-    }
-
-    cv_bridge::CvImageConstPtr cv_ptrD;
-    try
-    {
-        cv_ptrD = cv_bridge::toCvShare(msgD);
-    }
-    catch (cv_bridge::Exception &e)
-    {
-        return;
-    }
-
-    rclcpp::Time Ts = cv_ptrRGB->header.stamp;
-    mpORBSLAM2Node->setPose(mpSLAM->TrackRGBD(cv_ptrRGB->image, cv_ptrD->image, Ts.seconds()));
-    mpORBSLAM2Node->setState(mpSLAM->GetTrackingState());
-}
-
-void ImageGrabber::GrabStereo(const sensor_msgs::msg::Image::SharedPtr &msgLeft, const sensor_msgs::msg::Image::SharedPtr &msgRight)
-{
-    // Copy the ros image message to cv::Mat.
-    cv_bridge::CvImageConstPtr cv_ptrLeft;
-    try
-    {
-        cv_ptrLeft = cv_bridge::toCvShare(msgLeft);
-    }
-    catch (cv_bridge::Exception &e)
-    {
-        return;
-    }
-
-    cv_bridge::CvImageConstPtr cv_ptrRight;
-    try
-    {
-        cv_ptrRight = cv_bridge::toCvShare(msgRight);
-    }
-    catch (cv_bridge::Exception &e)
-    {
-        return;
-    }
-
-    rclcpp::Time Ts = cv_ptrLeft->header.stamp;
-    mpORBSLAM2Node->setPose(mpSLAM->TrackStereo(cv_ptrLeft->image, cv_ptrRight->image, Ts.seconds()));
-    mpORBSLAM2Node->setState(mpSLAM->GetTrackingState());
-}
-
 /* Helps with input argument parsing. */
 enum string_code
 {
