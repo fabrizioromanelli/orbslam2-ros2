@@ -56,3 +56,39 @@ ImageGrabber::ImageGrabber(ORB_SLAM2::System *pSLAM,
     else if (sensorType == ORB_SLAM2::System::STEREO)
         sync_->registerCallback(&ImageGrabber::GrabStereo, this);
 }
+
+/**
+ * @brief Grabs RGBD frames and calls ORB_SLAM2.
+ *
+ * @param msgRGB Pointer to (a pointer to) the RGB image.
+ * @param msgD Pointer to (a pointer to) the depth image.
+ */
+void ImageGrabber::GrabRGBD(const const sensor_msgs::msg::Image::SharedPtr &msgRGB,
+                            const sensor_msgs::msg::Image::SharedPtr &msgD)
+{
+    // Copy the ROS image messages to cv::Mat.
+    cv_bridge::CvImageConstPtr cv_ptrRGB;
+    try
+    {
+        cv_ptrRGB = cv_bridge::toCvShare(msgRGB);
+    }
+    catch (cv_bridge::Exception &e)
+    {
+        return;
+    }
+
+    cv_bridge::CvImageConstPtr cv_ptrD;
+    try
+    {
+        cv_ptrD = cv_bridge::toCvShare(msgD);
+    }
+    catch (cv_bridge::Exception &e)
+    {
+        return;
+    }
+
+    // Call ORB_SLAM2.
+    rclcpp::Time Ts = cv_ptrRGB->header.stamp;
+    mpORBSLAM2Node->setPose(mpSLAM->TrackRGBD(cv_ptrRGB->image, cv_ptrD->image, Ts.seconds()));
+    mpORBSLAM2Node->setState(mpSLAM->GetTrackingState());
+}

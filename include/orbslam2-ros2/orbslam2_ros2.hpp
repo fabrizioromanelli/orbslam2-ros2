@@ -85,8 +85,10 @@ public:
                  ORB_SLAM2::System::eSensor sensorType,
                  bool irDepth);
 
-    void GrabRGBD(const sensor_msgs::msg::Image::SharedPtr &msgRGB, const sensor_msgs::msg::Image::SharedPtr &msgD);
-    void GrabStereo(const sensor_msgs::msg::Image::SharedPtr &msgLeft, const sensor_msgs::msg::Image::SharedPtr &msgRight);
+    void GrabRGBD(const sensor_msgs::msg::Image::SharedPtr &msgRGB,
+                  const sensor_msgs::msg::Image::SharedPtr &msgD);
+    void GrabStereo(const sensor_msgs::msg::Image::SharedPtr &msgLeft,
+                    const sensor_msgs::msg::Image::SharedPtr &msgRight);
 
     ORB_SLAM2::System *mpSLAM;
     std::shared_ptr<ORBSLAM2Node> mpORBSLAM2Node;
