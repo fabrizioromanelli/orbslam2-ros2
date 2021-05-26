@@ -42,7 +42,7 @@ set(LIBS
 -lboost_system
 )
 
-add_executable(${PROJECT_NAME} src/orbslam2.cpp)
+add_executable(${PROJECT_NAME} src/orbslam2.cpp src/orbslam2_node.cpp src/image_grabber_node.cpp)
 ament_target_dependencies(${PROJECT_NAME} rclcpp std_msgs sensor_msgs realsense2_camera_msgs realsense2_description realsense2_camera Eigen3 Pangolin px4_msgs)
 
 target_link_libraries(${PROJECT_NAME} ${LIBS})
