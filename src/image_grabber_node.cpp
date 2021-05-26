@@ -50,7 +50,7 @@ ImageGrabber::ImageGrabber(ORB_SLAM2::System *pSLAM,
     stream2_sub_.subscribe(this, s2, rmw_qos_profile_sensor_data);
 
     // Create and configure streams synchronizer.
-    sync_ = std::make_shared<message_filters::Synchronizer<sync_pol>>(sync_pol(10), stream1_sub, stream2_sub);
+    sync_ = std::make_shared<message_filters::Synchronizer<sync_pol>>(sync_pol(10), stream1_sub_, stream2_sub_);
     if (sensorType == ORB_SLAM2::System::RGBD)
         sync_->registerCallback(&ImageGrabber::GrabRGBD, this);
     else if (sensorType == ORB_SLAM2::System::STEREO)

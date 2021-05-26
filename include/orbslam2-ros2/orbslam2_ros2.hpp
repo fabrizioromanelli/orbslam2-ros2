@@ -62,7 +62,7 @@ private:
 
     rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr ts_sub_;
 
-    std::atomic<uint64_t> timestamp_ = 0;
+    std::atomic<uint64_t> timestamp_;
 
     std::mutex poseMtx;
     std::mutex stateMtx;
