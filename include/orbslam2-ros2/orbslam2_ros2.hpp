@@ -28,14 +28,14 @@
 /* Pose messages. */
 #include <std_msgs/msg/int32.hpp>
 
-/* Image Grabber stuff. */
+/* Image Grabber message filters stuff. */
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image> sync_pol;
 
 /**
- * @brief ORB_SLAM2 node: publishes pose estimates on ROS 2 topics.
+ * @brief ORB_SLAM2 node: publishes pose estimates on ROS 2/PX4 topics.
  */
 class ORBSLAM2Node : public rclcpp::Node
 {
@@ -75,12 +75,15 @@ private:
 }
 
 /**
- * @brief ImageGrabber node: gets frames from the camera.
+ * @brief Gets frames from the camera.
  */
 class ImageGrabber : public rclcpp::Node
 {
 public:
-    ImageGrabber(ORB_SLAM2::System *pSLAM, std::shared_ptr<ORBSLAM2Node> pORBSLAM2Node) : mpSLAM(pSLAM), mpORBSLAM2Node(pORBSLAM2Node) {}
+    ImageGrabber(ORB_SLAM2::System *pSLAM,
+                 std::shared_ptr<ORBSLAM2Node> pORBSLAM2Node,
+                 ORB_SLAM2::System::eSensor sensorType,
+                 bool irDepth);
 
     void GrabRGBD(const sensor_msgs::msg::Image::SharedPtr &msgRGB, const sensor_msgs::msg::Image::SharedPtr &msgD);
     void GrabStereo(const sensor_msgs::msg::Image::SharedPtr &msgLeft, const sensor_msgs::msg::Image::SharedPtr &msgRight);
@@ -91,5 +94,5 @@ public:
 private:
     message_filters::Subscriber<sensor_msgs::msg::Image> stream1_sub_;
     message_filters::Subscriber<sensor_msgs::msg::Image> stream2_sub_;
-    message_filters::Synchronizer<sync_pol> sync_;
+    std::shared_ptr<message_filters::Synchronizer<sync_pol>> sync_;
 };

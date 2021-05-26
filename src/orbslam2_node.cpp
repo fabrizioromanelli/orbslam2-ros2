@@ -18,7 +18,7 @@ rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
  * @brief Creates an ORBSLAM2Node.
  * 
  * @param pSLAM ORB_SLAM2 instance pointer.
- * @param _sensorType Type of ORB_SLAM2 sensor in use.
+ * @param _sensorType Type of sensor in use.
  */
 ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM, ORB_SLAM2::System::eSensor _sensorType) : Node(ORB2NAME)
 {

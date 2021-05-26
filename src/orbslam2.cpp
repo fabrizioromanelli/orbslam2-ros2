@@ -92,6 +92,7 @@ int main(int argc, char **argv)
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
+    // Initialize ROS 2 connection.
     rclcpp::init(argc, argv);
     rclcpp::executors::MultiThreadedExecutor orbslam_mt_executor;
 
