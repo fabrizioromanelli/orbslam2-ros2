@@ -4,11 +4,6 @@
 
 #include "../include/orbslam2-ros2/orbslam2_ros2.hpp"
 
-void ORBSLAM2Node::timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg)
-{
-    timestamp_.store(msg->timestamp, std::memory_order_release);
-}
-
 void ORBSLAM2Node::setPose(cv::Mat _pose)
 {
     poseMtx.lock();
