@@ -20,7 +20,8 @@ rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
  * @param pSLAM ORB_SLAM2 instance pointer.
  * @param _sensorType Type of sensor in use.
  */
-ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM, ORB_SLAM2::System::eSensor _sensorType) : Node(ORB2NAME)
+ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
+                           ORB_SLAM2::System::eSensor _sensorType) : Node(ORB2NAME)
 {
     // Initialize members.
     mpSLAM = pSLAM;

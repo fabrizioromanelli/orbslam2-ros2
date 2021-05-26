@@ -13,6 +13,29 @@
 
 #include "../include/orbslam2-ros2/orbslam2_ros2.hpp"
 
+/**
+ * @brief ImageGrabber node spinner thread routine.
+ *
+ * @param pSLAM ORB_SLAM2 instance pointer.
+ * @param pORBSLAM2Node Sibling ORBSLAM2Node pointer.
+ * @param sensorType Type of sensor in use.
+ * @param irDepth IR depth measurement availability flag.
+ */
+void image_grabber_spinner(ORB_SLAM2::System *pSLAM,
+                           std::shared_ptr<ORBSLAM2Node> pORBSLAM2Node,
+                           ORB_SLAM2::System::eSensor sensorType,
+                           bool irDepth)
+{
+    // Create ImageGrabber node.
+    auto image_grabber_node_ptr = std::make_shared<ImageGrabber>(pSLAM,
+                                                                 pORBSLAM2Node,
+                                                                 sensorType,
+                                                                 irDepth);
+
+    // Spin on the ImageGrabber node.
+    rclcpp::spin(image_grabber_node_ptr);
+}
+
 /* Helps with input argument parsing. */
 enum string_code
 {
@@ -45,13 +68,14 @@ int main(int argc, char **argv)
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
-    // Initialize ROS 2 connection.
-    rclcpp::init(argc, argv);
-    rclcpp::executors::MultiThreadedExecutor orbslam_mt_executor;
-
+    // Parse input arguments (type of sensor and GUI on/off).
+    if (argc != 5)
+    {
+        std::cerr << "ERROR: Not enough input arguments." << std::endl;
+        exit(EXIT_FAILURE);
+    }
     bool irDepth = false;
     ORB_SLAM2::System::eSensor sensorType;
-    //! Input arguments check.
     switch (hashit(argv[3]))
     {
     case eStereo:
@@ -62,59 +86,41 @@ int main(int argc, char **argv)
     case eRGBD:
         sensorType = ORB_SLAM2::System::RGBD;
         break;
-
-        break;
     default:
         break;
     }
-
     bool display;
-    string dFlag(argv[4]);
+    std::string dFlag(argv[4]);
     if (dFlag == "ON")
         display = true;
     else
         display = false;
 
+    // Create ORB_SLAM2 instance.
     ORB_SLAM2::System SLAM(argv[1], argv[2], sensorType, display);
-    auto nodePtr = std::make_shared<ORBSLAM2Node>(&SLAM, sensorType);
 
-    ImageGrabber igb(&SLAM, nodePtr);
-    std::string s1, s2;
+    // Initialize ROS 2 connection and MT executor.
+    rclcpp::init(argc, argv);
+    rclcpp::executors::MultiThreadedExecutor orbs2_mt_executor;
+    std::cout << "ROS 2 executor initialized." << std::endl;
 
-    if (sensorType == ORB_SLAM2::System::RGBD)
-    {
-        if (irDepth)
-        {
-            s1 = "/vslam/infra1/image_rect_raw";
-            s2 = "/vslam/aligned_depth_to_infra1/image_raw";
-        }
-        else
-        {
-            s1 = "/vslam/color/image_raw";
-            s2 = "/vslam/aligned_depth_to_color/image_raw";
-        }
-    }
-    else if (sensorType == ORB_SLAM2::System::STEREO)
-    {
-        s1 = "/vslam/infra1/image_rect_raw";
-        s2 = "/vslam/infra2/image_rect_raw";
-    }
+    // Create ORBSLAM2Node.
+    auto orbs2_node_ptr = std::make_shared<ORBSLAM2Node>(&SLAM, sensorType);
 
-    //! REMOVE
-    message_filters::Subscriber<sensor_msgs::msg::Image> stream1_sub(nodePtr.get(), s1, rmw_qos_profile_sensor_data);
-    message_filters::Subscriber<sensor_msgs::msg::Image> stream2_sub(nodePtr.get(), s2, rmw_qos_profile_sensor_data);
-    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image> sync_pol;
-    message_filters::Synchronizer<sync_pol> sync(sync_pol(10), stream1_sub, stream2_sub);
-    //! REMOVE
+    // Spawn ImageGrabber executor thread.
+    std::thread image_grabber(image_grabber_spinner,
+                              &SLAM,
+                              orbs2_node_ptr,
+                              sensorType,
+                              irDepth);
 
-    if (sensorType == ORB_SLAM2::System::RGBD)
-        sync.registerCallback(&ImageGrabber::GrabRGBD, &igb);
-    else if (sensorType == ORB_SLAM2::System::STEREO)
-        sync.registerCallback(&ImageGrabber::GrabStereo, &igb);
+    // Now this thread will become one of the ORBSLAM2Node's ones.
+    orbs2_mt_executor.add_node(orbs2_node_ptr);
+    orbs2_mt_executor.spin();
+    image_grabber.join();
 
-    orbslam_mt_executor.add_node(nodePtr);
-
-    orbslam_mt_executor.spin();
+    // Done!
     rclcpp::shutdown();
-    return 0;
+    std::cout << "orbslam2_ros2 terminated!" << std::endl;
+    exit(EXIT_SUCCESS);
 }

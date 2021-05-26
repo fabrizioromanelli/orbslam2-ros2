@@ -15,7 +15,7 @@
  * @param pSLAM ORB_SLAM2 instance pointer.
  * @param pORBSLAM2Node Sibling ORBSLAM2Node pointer.
  * @param sensorType Type of sensor in use.
- * @param irDepth IR depth measurement availability.
+ * @param irDepth IR depth measurement availability flag.
  */
 ImageGrabber::ImageGrabber(ORB_SLAM2::System *pSLAM,
                            std::shared_ptr<ORBSLAM2Node> pORBSLAM2Node,
