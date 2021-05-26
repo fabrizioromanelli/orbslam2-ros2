@@ -37,8 +37,8 @@ public:
     void setState(int32_t _state);
 
 private:
-    void timer_vio_callback();
-    void timer_state_callback();
+    void timer_vio_callback(void);
+    void timer_state_callback(void);
     void timestamp_callback(cons px4_msgs::msg::Timesync::SharedPtr msg);
 
     rclcpp::CallbackGroup::SharedPtr timestamp_clbk_group_;

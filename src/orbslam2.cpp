@@ -63,15 +63,6 @@ void ORBSLAM2Node::timer_pose_callback()
     pose_publisher_->publish(message);
 }
 
-void ORBSLAM2Node::timer_state_callback()
-{
-    auto message = std_msgs::msg::Int32();
-    stateMtx.lock();
-    message.data = orbslam2State;
-    stateMtx.unlock();
-    state_publisher_->publish(message);
-}
-
 void ImageGrabber::GrabRGBD(const sensor_msgs::msg::Image::SharedPtr &msgRGB, const sensor_msgs::msg::Image::SharedPtr &msgD)
 {
     // Copy the ros image message to cv::Mat.

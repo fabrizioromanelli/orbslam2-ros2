@@ -77,3 +77,15 @@ void ORBSLAM2Node::setState(int32_t _state)
     orbslam2State = _state;
     stateMtx.unlock();
 }
+
+/**
+ * @brief Publishes the latest ORB_SLAM2 state value.
+ */
+void ORBSLAM2Node::timer_state_callback(void)
+{
+    std_msgs::msg::Int32 msg{};
+    stateMtx.lock();
+    msg.data = orbslam2State;
+    stateMtx.unlock();
+    state_publisher_->publish(msg);
+}
