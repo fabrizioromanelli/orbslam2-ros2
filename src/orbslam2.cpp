@@ -1,25 +1,10 @@
-#include <memory>
-#include <chrono>
-#include <mutex>
-#include <Eigen/Geometry>
-#include <cv_bridge/cv_bridge.h>
-#include <opencv2/core/core.hpp>
-#include <ORB_SLAM2/System.h>
-#include "rmw/qos_profiles.h"
-#include "std_msgs/msg/int32.hpp"
-#include <message_filters/subscriber.h>
-#include <message_filters/time_synchronizer.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include "rclcpp/rclcpp.hpp"
+#include <iostream>
+#include <cstdio>
 
-// Includes for PX4
-#include <px4_msgs/msg/timesync.hpp>
-#include <px4_msgs/msg/vehicle_visual_odometry.hpp>
+#include "../include/orbslam2-ros2/orbslam2_ros2.hpp"
 
-rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
-
-using std::placeholders::_1;
-using namespace std::chrono_literals;
+using std::placeholders::_1;  //! PROPAGATE
+using namespace std::chrono_literals; //! PROPAGATE
 
 class ORBSLAM2Node : public rclcpp::Node
 {
@@ -46,37 +31,12 @@ public:
             10,
             std::bind(&ORBSLAM2Node::timestamp_callback, this, std::placeholders::_1),
             timestamp_sub_opt);
-
         // Create publishers with 50ms period for pose and 100ms period for state
         pose_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 10);
         pose_timer_ = this->create_wall_timer(50ms, std::bind(&ORBSLAM2Node::timer_pose_callback, this), vio_clbk_group_);
         state_publisher_ = this->create_publisher<std_msgs::msg::Int32>("orbslam2_state", qos);
         state_timer_ = this->create_wall_timer(100ms, std::bind(&ORBSLAM2Node::timer_state_callback, this), state_clbk_group_);
     }
-
-    void setPose(cv::Mat);
-    void setState(signed int);
-
-private:
-    void timer_pose_callback();
-    void timer_state_callback();
-    void timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg);
-
-    rclcpp::CallbackGroup::SharedPtr timestamp_clbk_group_;
-    rclcpp::CallbackGroup::SharedPtr state_clbk_group_;
-    rclcpp::CallbackGroup::SharedPtr vio_clbk_group_;
-
-    ORB_SLAM2::System *mpSLAM;
-    ORB_SLAM2::System::eSensor sensorType;
-    rclcpp::TimerBase::SharedPtr pose_timer_, state_timer_;
-    rclcpp::Publisher<px4_msgs::msg::VehicleVisualOdometry>::SharedPtr pose_publisher_;
-    rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr state_publisher_;
-    rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr ts_subscriber_;
-    cv::Mat orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
-    signed int orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
-    std::mutex poseMtx;
-    std::mutex stateMtx;
-    std::atomic<uint64_t> timestamp_; //!< common synced timestamped
 };
 
 void ORBSLAM2Node::timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg)
@@ -166,18 +126,6 @@ void ORBSLAM2Node::timer_state_callback()
     state_publisher_->publish(message);
 }
 
-class ImageGrabber
-{
-public:
-    ImageGrabber(ORB_SLAM2::System *pSLAM, std::shared_ptr<ORBSLAM2Node> pORBSLAM2Node) : mpSLAM(pSLAM), mpORBSLAM2Node(pORBSLAM2Node) {}
-
-    void GrabRGBD(const sensor_msgs::msg::Image::SharedPtr &msgRGB, const sensor_msgs::msg::Image::SharedPtr &msgD);
-    void GrabStereo(const sensor_msgs::msg::Image::SharedPtr &msgLeft, const sensor_msgs::msg::Image::SharedPtr &msgRight);
-
-    ORB_SLAM2::System *mpSLAM;
-    std::shared_ptr<ORBSLAM2Node> mpORBSLAM2Node;
-};
-
 void ImageGrabber::GrabRGBD(const sensor_msgs::msg::Image::SharedPtr &msgRGB, const sensor_msgs::msg::Image::SharedPtr &msgD)
 {
     // Copy the ros image message to cv::Mat.
@@ -234,6 +182,7 @@ void ImageGrabber::GrabStereo(const sensor_msgs::msg::Image::SharedPtr &msgLeft,
     mpORBSLAM2Node->setState(mpSLAM->GetTrackingState());
 }
 
+/* Helps with input argument parsing. */
 enum string_code
 {
     eStereo,
@@ -241,6 +190,12 @@ enum string_code
     eIRD
 };
 
+/**
+ * @brief Parses sensor type input argument.
+ *
+ * @param inString Input argument.
+ * @return Sensor type (from enum).
+ */
 string_code hashit(std::string const &inString)
 {
     if (inString == "STEREO")
@@ -252,7 +207,7 @@ string_code hashit(std::string const &inString)
     return eStereo;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char **argv)
 {
     // Disable buffering on stdout and stderr, for performance and correctness.
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -263,6 +218,7 @@ int main(int argc, char *argv[])
 
     bool irDepth = false;
     ORB_SLAM2::System::eSensor sensorType;
+    //! Input arguments check.
     switch (hashit(argv[3]))
     {
     case eStereo:
@@ -311,10 +267,12 @@ int main(int argc, char *argv[])
         s2 = "/vslam/infra2/image_rect_raw";
     }
 
+    //! REMOVE
     message_filters::Subscriber<sensor_msgs::msg::Image> stream1_sub(nodePtr.get(), s1, rmw_qos_profile_sensor_data);
     message_filters::Subscriber<sensor_msgs::msg::Image> stream2_sub(nodePtr.get(), s2, rmw_qos_profile_sensor_data);
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image> sync_pol;
     message_filters::Synchronizer<sync_pol> sync(sync_pol(10), stream1_sub, stream2_sub);
+    //! REMOVE
 
     if (sensorType == ORB_SLAM2::System::RGBD)
         sync.registerCallback(&ImageGrabber::GrabRGBD, &igb);
