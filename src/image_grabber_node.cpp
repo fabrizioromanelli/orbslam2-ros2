@@ -20,7 +20,7 @@
 ImageGrabber::ImageGrabber(ORB_SLAM2::System *pSLAM,
                            std::shared_ptr<ORBSLAM2Node> pORBSLAM2Node,
                            ORB_SLAM2::System::eSensor sensorType,
-                           bool irDepth) : Node("IMGRABNAME")
+                           bool irDepth) : Node(IMGRABNAME)
 {
     // Set common members.
     mpSLAM = pSLAM;
