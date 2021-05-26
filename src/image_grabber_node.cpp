@@ -55,6 +55,8 @@ ImageGrabber::ImageGrabber(ORB_SLAM2::System *pSLAM,
         sync_->registerCallback(&ImageGrabber::GrabRGBD, this);
     else if (sensorType == ORB_SLAM2::System::STEREO)
         sync_->registerCallback(&ImageGrabber::GrabStereo, this);
+    
+    RCLCPP_INFO(this->get_logger(), IMGRABNAME " node initialized.");
 }
 
 /**
