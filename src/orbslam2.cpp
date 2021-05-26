@@ -1,43 +1,8 @@
 #include <iostream>
 #include <cstdio>
+#include <thread>
 
 #include "../include/orbslam2-ros2/orbslam2_ros2.hpp"
-
-using std::placeholders::_1;  //! PROPAGATE
-using namespace std::chrono_literals; //! PROPAGATE
-
-class ORBSLAM2Node : public rclcpp::Node
-{
-public:
-    ORBSLAM2Node(ORB_SLAM2::System *pSLAM, ORB_SLAM2::System::eSensor _sensorType)
-        : Node("orbslam2"), mpSLAM(pSLAM), sensorType(_sensorType)
-    {
-        auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, qos_profile.depth), qos_profile);
-
-        // Create callback groups.
-        timestamp_clbk_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-        state_clbk_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-        vio_clbk_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-
-        // Create subscriber to the timesync topic of PX4
-        // Possible known issue with PX4 timestamp sync. If the following is not working, try to:
-        // subscribe to the VehicleOdometry message, copy their timestamp and timestamp_sample to
-        // timestamp_ and then publishe the VehicleVisualOdometry with these timestamps.
-        // Ref: https://discuss.px4.io/t/fastrtps-ros2-foxy-vehicle-visual-odometry-advertiser/19149/5
-        auto timestamp_sub_opt = rclcpp::SubscriptionOptions();
-        timestamp_sub_opt.callback_group = timestamp_clbk_group_;
-        ts_subscriber_ = this->create_subscription<px4_msgs::msg::Timesync>(
-            "/Timesync_PubSubTopic",
-            10,
-            std::bind(&ORBSLAM2Node::timestamp_callback, this, std::placeholders::_1),
-            timestamp_sub_opt);
-        // Create publishers with 50ms period for pose and 100ms period for state
-        pose_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 10);
-        pose_timer_ = this->create_wall_timer(50ms, std::bind(&ORBSLAM2Node::timer_pose_callback, this), vio_clbk_group_);
-        state_publisher_ = this->create_publisher<std_msgs::msg::Int32>("orbslam2_state", qos);
-        state_timer_ = this->create_wall_timer(100ms, std::bind(&ORBSLAM2Node::timer_state_callback, this), state_clbk_group_);
-    }
-};
 
 void ORBSLAM2Node::timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg)
 {
@@ -207,6 +172,7 @@ string_code hashit(std::string const &inString)
     return eStereo;
 }
 
+/* The works. */
 int main(int argc, char **argv)
 {
     // Disable buffering on stdout and stderr, for performance and correctness.

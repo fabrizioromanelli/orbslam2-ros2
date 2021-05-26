@@ -37,7 +37,7 @@ public:
     void setState(int _state);
 
 private:
-    void timer_pose_callback();
+    void timer_vio_callback();
     void timer_state_callback();
     void timestamp_callback(cons px4_msgs::msg::Timesync::SharedPtr msg);
 
@@ -45,7 +45,7 @@ private:
     rclcpp::CallbackGroup::SharedPtr state_clbk_group_;
     rclcpp::CallbackGroup::SharedPtr vio_clbk_group_;
 
-    rclcpp::TimerBase::SharedPtr pose_timer_;
+    rclcpp::TimerBase::SharedPtr vio_timer_;
     rclcpp::TimerBase::SharedPtr state_timer_;
 
     rclcpp::Publisher<px4_msgs::msg::VehicleVisualOdometry>::SharedPtr vio_publisher_;
@@ -53,7 +53,7 @@ private:
 
     rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr ts_sub_;
 
-    std::atomic<uint64_t> timestamp_;
+    std::atomic<uint64_t> timestamp_ = 0UL;
 
     std::mutex poseMtx;
     std::mutex stateMtx;
