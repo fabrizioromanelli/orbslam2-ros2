@@ -1,3 +1,12 @@
+/**
+ * @brief ORB_SLAM2 for ROS 2 nodes definitions.
+ *
+ * @author Fabrizio Romanelli <fabrizio.romanelli@gmail.com>
+ * @author Roberto Masocco <robmasocco@gmail.com>
+ *
+ * @date May 26, 2021
+ */
+
 #include <memory>
 #include <chrono>
 #include <mutex>

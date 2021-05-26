@@ -4,65 +4,6 @@
 
 #include "../include/orbslam2-ros2/orbslam2_ros2.hpp"
 
-void ORBSLAM2Node::timer_pose_callback()
-{
-    px4_msgs::msg::VehicleVisualOdometry message = px4_msgs::msg::VehicleVisualOdometry();
-    uint64_t msg_timestamp = timestamp_.load(std::memory_order_acquire);
-
-    message.timestamp = msg_timestamp;
-    message.timestamp_sample = msg_timestamp;
-
-    message.local_frame = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_NED;
-    message.velocity_frame = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_NED;
-    message.q_offset[0] = NAN;
-    message.pose_covariance[0] = NAN;
-    message.pose_covariance[15] = NAN;
-    message.vx = NAN;
-    message.vy = NAN;
-    message.vz = NAN;
-    message.rollspeed = NAN;
-    message.pitchspeed = NAN;
-    message.yawspeed = NAN;
-    message.velocity_covariance[0] = NAN;
-    message.velocity_covariance[15] = NAN;
-
-    poseMtx.lock();
-    if (orbslam2Pose.empty())
-    {
-        orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
-        message.x = NAN;
-        message.y = NAN;
-        message.z = NAN;
-        message.q[0] = NAN;
-    }
-    else
-    {
-        cv::Mat Rwc = orbslam2Pose.rowRange(0, 3).colRange(0, 3).t();
-        cv::Mat Twc = -Rwc * orbslam2Pose.rowRange(0, 3).col(3);
-
-        Eigen::Matrix3f orMat;
-        orMat(0, 0) = orbslam2Pose.at<float>(0, 0);
-        orMat(0, 1) = orbslam2Pose.at<float>(0, 1);
-        orMat(0, 2) = orbslam2Pose.at<float>(0, 2);
-        orMat(1, 0) = orbslam2Pose.at<float>(1, 0);
-        orMat(1, 1) = orbslam2Pose.at<float>(1, 1);
-        orMat(1, 2) = orbslam2Pose.at<float>(1, 2);
-        orMat(2, 0) = orbslam2Pose.at<float>(2, 0);
-        orMat(2, 1) = orbslam2Pose.at<float>(2, 1);
-        orMat(2, 2) = orbslam2Pose.at<float>(2, 2);
-        Eigen::Quaternionf q(orMat);
-
-        // Conversion from VSLAM to FRD is [x y z]frd = [z x y]vslam
-        message.x = Twc.at<float>(2);
-        message.y = Twc.at<float>(0);
-        message.z = Twc.at<float>(1);
-        message.q = {q.w(), q.z(), q.x(), q.y()};
-    }
-    poseMtx.unlock();
-
-    pose_publisher_->publish(message);
-}
-
 void ImageGrabber::GrabRGBD(const sensor_msgs::msg::Image::SharedPtr &msgRGB, const sensor_msgs::msg::Image::SharedPtr &msgD)
 {
     // Copy the ros image message to cv::Mat.
