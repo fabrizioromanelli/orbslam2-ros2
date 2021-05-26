@@ -65,7 +65,7 @@ ImageGrabber::ImageGrabber(ORB_SLAM2::System *pSLAM,
  * @param msgRGB Pointer to (a pointer to) the RGB image.
  * @param msgD Pointer to (a pointer to) the depth image.
  */
-void ImageGrabber::GrabRGBD(const const sensor_msgs::msg::Image::SharedPtr &msgRGB,
+void ImageGrabber::GrabRGBD(const sensor_msgs::msg::Image::SharedPtr &msgRGB,
                             const sensor_msgs::msg::Image::SharedPtr &msgD)
 {
     // Copy the ROS image messages to cv::Mat.
