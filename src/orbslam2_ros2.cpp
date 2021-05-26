@@ -69,11 +69,6 @@ int main(int argc, char **argv)
     setvbuf(stderr, NULL, _IONBF, 0);
 
     // Parse input arguments (type of sensor and GUI on/off).
-    if (argc != 5)
-    {
-        std::cerr << "ERROR: Not enough input arguments." << std::endl;
-        exit(EXIT_FAILURE);
-    }
     bool irDepth = false;
     ORB_SLAM2::System::eSensor sensorType;
     switch (hashit(argv[3]))
