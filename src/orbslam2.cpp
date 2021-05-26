@@ -4,20 +4,6 @@
 
 #include "../include/orbslam2-ros2/orbslam2_ros2.hpp"
 
-void ORBSLAM2Node::setPose(cv::Mat _pose)
-{
-    poseMtx.lock();
-    orbslam2Pose = _pose;
-    poseMtx.unlock();
-}
-
-void ORBSLAM2Node::setState(signed int _state)
-{
-    stateMtx.lock();
-    orbslam2State = _state;
-    stateMtx.unlock();
-}
-
 void ORBSLAM2Node::timer_pose_callback()
 {
     px4_msgs::msg::VehicleVisualOdometry message = px4_msgs::msg::VehicleVisualOdometry();
@@ -26,7 +12,7 @@ void ORBSLAM2Node::timer_pose_callback()
     message.timestamp = msg_timestamp;
     message.timestamp_sample = msg_timestamp;
 
-    message.local_frame = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_NED; // ! Needs to be investigated further.
+    message.local_frame = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_NED;
     message.velocity_frame = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_NED;
     message.q_offset[0] = NAN;
     message.pose_covariance[0] = NAN;

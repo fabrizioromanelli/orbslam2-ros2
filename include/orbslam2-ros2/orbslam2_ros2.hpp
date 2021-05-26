@@ -34,7 +34,7 @@ public:
     ORBSLAM2Node(ORB_SLAM2::System *pSLAM, ORB_SLAM2::System::eSensor _sensorType);
 
     void setPose(cv::Mat _pose);
-    void setState(int _state);
+    void setState(int32_t _state);
 
 private:
     void timer_vio_callback();
@@ -60,7 +60,7 @@ private:
 
     ORB_SLAM2::System *mpSLAM;
     ORB_SLAM2::System::eSensor sensorType;
-    int orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
+    int32_t orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
 
     cv::Mat orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
 }

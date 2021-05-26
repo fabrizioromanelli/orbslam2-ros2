@@ -54,3 +54,26 @@ void ORBSLAM2Node::timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr m
 {
     timestamp_.store(msg->timestamp, std::memory_order_release);
 }
+
+/** @brief Setter method for pose member.
+ *
+ * @param _pose Pose matrix to store.
+ */
+void ORBSLAM2Node::setPose(cv::Mat _pose)
+{
+    poseMtx.lock();
+    orbslam2Pose = _pose;
+    poseMtx.unlock();
+}
+
+/**
+ * @brief Setter method for ORB_SLAM2 state member.
+ *
+ * @param _state New internal state to set.
+ */
+void ORBSLAM2Node::setState(int32_t _state)
+{
+    stateMtx.lock();
+    orbslam2State = _state;
+    stateMtx.unlock();
+}
