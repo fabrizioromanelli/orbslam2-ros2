@@ -7,6 +7,9 @@ rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
 
 /**
  * @brief Creates an ORBSLAM2Node.
+ * 
+ * @param pSLAM ORB_SLAM2 instance pointer.
+ * @param _sensorType Type of ORB_SLAM2 sensor in use.
  */
 ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM, ORB_SLAM2::System::eSensor _sensorType) : Node(ORB2NAME)
 {
@@ -44,6 +47,8 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM, ORB_SLAM2::System::eSensor 
 
 /**
  * @brief Stores the latest PX4 timestamp.
+ * 
+ * @param msg Timesync message pointer.
  */
 void ORBSLAM2Node::timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg)
 {
