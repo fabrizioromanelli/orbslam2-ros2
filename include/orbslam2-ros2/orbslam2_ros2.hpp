@@ -48,7 +48,7 @@ public:
 private:
     void timer_vio_callback(void);
     void timer_state_callback(void);
-    void timestamp_callback(cons px4_msgs::msg::Timesync::SharedPtr msg);
+    void timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg);
 
     rclcpp::CallbackGroup::SharedPtr timestamp_clbk_group_;
     rclcpp::CallbackGroup::SharedPtr state_clbk_group_;
@@ -62,7 +62,7 @@ private:
 
     rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr ts_sub_;
 
-    std::atomic<uint64_t> timestamp_ = 0UL;
+    std::atomic<uint64_t> timestamp_ = 0;
 
     std::mutex poseMtx;
     std::mutex stateMtx;
@@ -72,7 +72,7 @@ private:
     int32_t orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
 
     cv::Mat orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
-}
+};
 
 /**
  * @brief Gets frames from the camera and calls ORB_SLAM2.

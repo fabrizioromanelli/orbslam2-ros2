@@ -46,8 +46,8 @@ ImageGrabber::ImageGrabber(ORB_SLAM2::System *pSLAM,
         s1 = "/vslam/infra1/image_rect_raw";
         s2 = "/vslam/infra2/image_rect_raw";
     }
-    stream1_sub.subscribe(this, s1, rmw_qos_profile_sensor_data);
-    stream2_sub.subscribe(this, s2, rmw_qos_profile_sensor_data);
+    stream1_sub_.subscribe(this, s1, rmw_qos_profile_sensor_data);
+    stream2_sub_.subscribe(this, s2, rmw_qos_profile_sensor_data);
 
     // Create and configure streams synchronizer.
     sync_ = std::make_shared<message_filters::Synchronizer<sync_pol>>(sync_pol(10), stream1_sub, stream2_sub);
