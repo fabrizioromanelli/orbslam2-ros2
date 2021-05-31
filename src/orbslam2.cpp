@@ -133,7 +133,7 @@ void ORBSLAM2Node::timer_pose_callback()
     message.x = Twc.at<float>(2);
     message.y = Twc.at<float>(0);
     message.z = Twc.at<float>(1);
-    message.q = {q.w(), q.z(), q.x(), q.y()};
+    message.q = {q.w(), -q.z(), -q.x(), -q.y()};
   }
   poseMtx.unlock();
 
