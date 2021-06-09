@@ -79,7 +79,7 @@ void ORBSLAM2Node::setPose(cv::Mat _pose)
     old_orbslam2Pose = orbslam2Pose;
     orbslam2Pose = _pose;
     // Compute a and b coefficient for linear extrapolation.
-    if (curr_Ts == old_Ts)
+    if (curr_Ts != old_Ts)
     {
         a = (orbslam2Pose - old_orbslam2Pose) / (curr_Ts - old_Ts);
         b = old_orbslam2Pose - (orbslam2Pose - old_orbslam2Pose) / (curr_Ts - old_Ts) * old_Ts;
