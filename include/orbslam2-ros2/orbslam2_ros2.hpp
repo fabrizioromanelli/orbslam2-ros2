@@ -45,6 +45,10 @@ public:
     void setPose(cv::Mat _pose);
     void setState(int32_t _state);
 
+    std::atomic<uint64_t> timestamp_;
+
+    double old_Ts, curr_Ts;
+
 private:
     void timer_vio_callback(void);
     void timer_state_callback(void);
@@ -62,8 +66,6 @@ private:
 
     rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr ts_sub_;
 
-    std::atomic<uint64_t> timestamp_;
-
     std::mutex poseMtx;
     std::mutex stateMtx;
 
@@ -76,8 +78,6 @@ private:
 
     cv::Mat a = cv::Mat::eye(4, 4, CV_32F);
     cv::Mat b = cv::Mat::eye(4, 4, CV_32F);
-
-    double old_Ts, curr_Ts;
 };
 
 /**
