@@ -67,14 +67,23 @@ void ORBSLAM2Node::timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr m
     timestamp_.store(msg->timestamp, std::memory_order_release);
 }
 
-/** @brief Setter method for pose member.
+/**
+ * @brief Setter method for pose member.
  *
  * @param _pose Pose matrix to store.
  */
 void ORBSLAM2Node::setPose(cv::Mat _pose)
 {
     poseMtx.lock();
+    // Flip current and old samples.
+    old_orbslam2Pose = orbslam2Pose;
     orbslam2Pose = _pose;
+    // Compute a and b coefficient for linear extrapolation.
+    if (curr_Ts == old_Ts)
+    {
+        a = (orbslam2Pose - old_orbslam2Pose) / (curr_Ts - old_Ts);
+        b = old_orbslam2Pose - (orbslam2Pose - old_orbslam2Pose) / (curr_Ts - old_Ts) * old_Ts;
+    }
     poseMtx.unlock();
 }
 
@@ -144,19 +153,20 @@ void ORBSLAM2Node::timer_vio_callback(void)
     }
     else
     {
-        cv::Mat Rwc = orbslam2Pose.rowRange(0, 3).colRange(0, 3).t();
-        cv::Mat Twc = -Rwc * orbslam2Pose.rowRange(0, 3).col(3);
+        cv::Mat ext_pose = a * (double)msg_timestamp + b;
+        cv::Mat Rwc = ext_pose.rowRange(0, 3).colRange(0, 3).t();
+        cv::Mat Twc = -Rwc * ext_pose.rowRange(0, 3).col(3);
 
         Eigen::Matrix3f orMat;
-        orMat(0, 0) = orbslam2Pose.at<float>(0, 0);
-        orMat(0, 1) = orbslam2Pose.at<float>(0, 1);
-        orMat(0, 2) = orbslam2Pose.at<float>(0, 2);
-        orMat(1, 0) = orbslam2Pose.at<float>(1, 0);
-        orMat(1, 1) = orbslam2Pose.at<float>(1, 1);
-        orMat(1, 2) = orbslam2Pose.at<float>(1, 2);
-        orMat(2, 0) = orbslam2Pose.at<float>(2, 0);
-        orMat(2, 1) = orbslam2Pose.at<float>(2, 1);
-        orMat(2, 2) = orbslam2Pose.at<float>(2, 2);
+        orMat(0, 0) = ext_pose.at<float>(0, 0);
+        orMat(0, 1) = ext_pose.at<float>(0, 1);
+        orMat(0, 2) = ext_pose.at<float>(0, 2);
+        orMat(1, 0) = ext_pose.at<float>(1, 0);
+        orMat(1, 1) = ext_pose.at<float>(1, 1);
+        orMat(1, 2) = ext_pose.at<float>(1, 2);
+        orMat(2, 0) = ext_pose.at<float>(2, 0);
+        orMat(2, 1) = ext_pose.at<float>(2, 1);
+        orMat(2, 2) = ext_pose.at<float>(2, 2);
         Eigen::Quaternionf q(orMat);
 
         // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.

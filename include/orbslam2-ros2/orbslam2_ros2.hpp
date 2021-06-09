@@ -72,6 +72,12 @@ private:
     int32_t orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
 
     cv::Mat orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
+    cv::Mat old_orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
+
+    cv::Mat a = cv::Mat::eye(4, 4, CV_32F);
+    cv::Mat b = cv::Mat::eye(4, 4, CV_32F);
+
+    double old_Ts, curr_Ts;
 };
 
 /**
