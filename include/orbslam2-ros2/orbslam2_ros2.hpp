@@ -17,6 +17,8 @@
 #include <opencv2/core/core.hpp>
 #include <ORB_SLAM2/System.h>
 
+#include "../../src/Extrapolator/Extrapolator_Quadratic_FixedTime.hpp"
+
 /* Node names. */
 #define ORB2NAME "orbslam2_node"
 #define IMGRABNAME "image_grabber"
@@ -34,6 +36,9 @@
 #include <message_filters/sync_policies/approximate_time.h>
 typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image> sync_pol;
 
+/* Camera sampling + processing time (accounts for ORB_SLAM2 computations too). */
+#define CAMERA_STIME 0.1
+
 /**
  * @brief ORB_SLAM2 node: publishes pose estimates on ROS 2/PX4 topics.
  */
@@ -45,14 +50,20 @@ public:
     void setPose(cv::Mat _pose);
     void setState(int32_t _state);
 
-    std::atomic<uint64_t> timestamp_;
-
-    double old_Ts, curr_Ts;
-
 private:
     void timer_vio_callback(void);
     void timer_state_callback(void);
     void timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg);
+
+    Extrapolator x(CAMERA_STIME);
+    Extrapolator y(CAMERA_STIME);
+    Extrapolator z(CAMERA_STIME);
+    Extrapolator q_w(CAMERA_STIME);
+    Extrapolator q_i(CAMERA_STIME);
+    Extrapolator q_j(CAMERA_STIME);
+    Extrapolator q_k(CAMERA_STIME);
+
+    std::atomic<uint64_t> timestamp_;
 
     rclcpp::CallbackGroup::SharedPtr timestamp_clbk_group_;
     rclcpp::CallbackGroup::SharedPtr state_clbk_group_;
@@ -74,10 +85,6 @@ private:
     int32_t orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
 
     cv::Mat orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
-    cv::Mat old_orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
-
-    cv::Mat a = cv::Mat::eye(4, 4, CV_32F);
-    cv::Mat b = cv::Mat::eye(4, 4, CV_32F);
 };
 
 /**

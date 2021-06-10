@@ -91,8 +91,6 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::msg::Image::SharedPtr &msgRGB,
 
     // Call ORB_SLAM2 and update local data.
     rclcpp::Time Ts = cv_ptrRGB->header.stamp;
-    mpORBSLAM2Node->old_Ts = mpORBSLAM2Node->curr_Ts;
-    mpORBSLAM2Node->curr_Ts = (double)(mpORBSLAM2Node->timestamp_.load(std::memory_order_acquire));
     mpORBSLAM2Node->setPose(mpSLAM->TrackRGBD(cv_ptrRGB->image, cv_ptrD->image, Ts.seconds()));
     mpORBSLAM2Node->setState(mpSLAM->GetTrackingState());
 }
