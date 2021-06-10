@@ -20,7 +20,7 @@
 #include "../../src/Extrapolator/Extrapolator_Quadratic_FixedTime.hpp"
 
 /* Camera sampling + processing time (accounts for ORB_SLAM2 computations too). */
-#define CAMERA_STIME 0.1
+#define CAMERA_STIME 0.067
 
 /* Node names. */
 #define ORB2NAME "orbslam2_node"
