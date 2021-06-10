@@ -194,7 +194,7 @@ void ORBSLAM2Node::timer_vio_callback(void)
     // Get the rest from the extrapolators.
     poseMtx.lock();
     double T = get_time();  // Extrapolator takes new absolute sampling time.
-    RCLCPP_INFO(this-get_logger(), "GET T: %f", T);
+    RCLCPP_INFO(this->get_logger(), "GET T: %f", T);
     message.set__x((float)(ext_x.get(T)));
     message.set__y((float)(ext_y.get(T)));
     message.set__z((float)(ext_z.get(T)));
