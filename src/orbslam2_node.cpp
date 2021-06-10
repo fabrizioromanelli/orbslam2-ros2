@@ -98,6 +98,7 @@ void ORBSLAM2Node::setPose(cv::Mat _pose)
         ext_q_i.reset();
         ext_q_j.reset();
         ext_q_k.reset();
+        RCLCPP_WARN(this->get_logger(), "SLAM lost tracking.");
     }
     else
     {
