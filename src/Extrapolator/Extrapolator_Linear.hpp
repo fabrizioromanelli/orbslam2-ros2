@@ -14,7 +14,7 @@ class Extrapolator
 		Extrapolator(double T, double S);
 		double get(double T);
 		void updateSample(double T, double S);
-}
+};
 
 #endif
 

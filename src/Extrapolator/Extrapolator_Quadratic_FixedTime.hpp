@@ -24,6 +24,6 @@ public:
     double get(double T);
     void updateSample(double T, double S);
     void reset(void);
-}
+};
 
 #endif
