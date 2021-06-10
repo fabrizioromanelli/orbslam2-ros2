@@ -27,8 +27,11 @@
 #include <px4_msgs/msg/timesync.hpp>
 #include <px4_msgs/msg/vehicle_visual_odometry.hpp>
 
-/* Pose messages. */
+/* State messages. */
 #include <std_msgs/msg/int32.hpp>
+
+/* Camera sampling messages. */
+#include <example_interfaces/msg/bool.hpp>
 
 /* Image Grabber message filters stuff. */
 #include <message_filters/subscriber.h>
@@ -113,4 +116,6 @@ private:
     message_filters::Subscriber<sensor_msgs::msg::Image> stream1_sub_;
     message_filters::Subscriber<sensor_msgs::msg::Image> stream2_sub_;
     std::shared_ptr<message_filters::Synchronizer<sync_pol>> sync_;
+
+    rclcpp::Publisher<example_interfaces::msg::Bool>::SharedPtr sampling_publisher_;
 };

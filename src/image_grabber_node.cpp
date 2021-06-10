@@ -55,7 +55,10 @@ ImageGrabber::ImageGrabber(ORB_SLAM2::System *pSLAM,
         sync_->registerCallback(&ImageGrabber::GrabRGBD, this);
     else if (sensorType == ORB_SLAM2::System::STEREO)
         sync_->registerCallback(&ImageGrabber::GrabStereo, this);
-    
+
+    // Create camera sampling publisher.
+    sampling_publisher_ = this->create_publisher<example_interfaces::msg::Bool>("CameraSampling", 10);
+
     RCLCPP_INFO(this->get_logger(), "Node initialized.");
 }
 
@@ -93,6 +96,11 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::msg::Image::SharedPtr &msgRGB,
     rclcpp::Time Ts = cv_ptrRGB->header.stamp;
     mpORBSLAM2Node->setPose(mpSLAM->TrackRGBD(cv_ptrRGB->image, cv_ptrD->image, Ts.seconds()));
     mpORBSLAM2Node->setState(mpSLAM->GetTrackingState());
+
+    // Publish camera sampling message.
+    example_interfaces::msg::Bool sampling_msg{};
+    sampling_msg.set__data(true);
+    sampling_publisher_->publish(sampling_msg);
 }
 
 /**
@@ -129,4 +137,9 @@ void ImageGrabber::GrabStereo(const sensor_msgs::msg::Image::SharedPtr &msgLeft,
     rclcpp::Time Ts = cv_ptrLeft->header.stamp;
     mpORBSLAM2Node->setPose(mpSLAM->TrackStereo(cv_ptrLeft->image, cv_ptrRight->image, Ts.seconds()));
     mpORBSLAM2Node->setState(mpSLAM->GetTrackingState());
+
+    // Publish camera sampling message.
+    example_interfaces::msg::Bool sampling_msg{};
+    sampling_msg.set__data(true);
+    sampling_publisher_->publish(sampling_msg);
 }
