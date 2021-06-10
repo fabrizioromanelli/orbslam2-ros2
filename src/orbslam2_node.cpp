@@ -195,7 +195,7 @@ void ORBSLAM2Node::timer_vio_callback(void)
     float q[4] = {(float)(ext_q_w.get(T)),
                   (float)(ext_q_i.get(T)),
                   (float)(ext_q_j.get(T)),
-                  (float)(ext_q_k.get(T)});
+                  (float)(ext_q_k.get(T))};
     message.set__x((float)(ext_x.get(T)));
     message.set__y((float)(ext_y.get(T)));
     message.set__z((float)(ext_z.get(T)));
