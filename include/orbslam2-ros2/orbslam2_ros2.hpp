@@ -19,6 +19,9 @@
 
 #include "../../src/Extrapolator/Extrapolator_Quadratic_FixedTime.hpp"
 
+/* Camera sampling + processing time (accounts for ORB_SLAM2 computations too). */
+#define CAMERA_STIME 0.1
+
 /* Node names. */
 #define ORB2NAME "orbslam2_node"
 #define IMGRABNAME "image_grabber"
@@ -39,8 +42,6 @@
 #include <message_filters/sync_policies/approximate_time.h>
 typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image> sync_pol;
 
-/* Camera sampling + processing time (accounts for ORB_SLAM2 computations too). */
-#define CAMERA_STIME 0.1
 
 /**
  * @brief ORB_SLAM2 node: publishes pose estimates on ROS 2/PX4 topics.
@@ -60,13 +61,13 @@ private:
     void timer_state_callback(void);
     void timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg);
 
-    Extrapolator ext_x(CAMERA_STIME);
-    Extrapolator ext_y(CAMERA_STIME);
-    Extrapolator ext_z(CAMERA_STIME);
-    Extrapolator ext_q_w(CAMERA_STIME);
-    Extrapolator ext_q_i(CAMERA_STIME);
-    Extrapolator ext_q_j(CAMERA_STIME);
-    Extrapolator ext_q_k(CAMERA_STIME);
+    Extrapolator ext_x = Extrapolator(CAMERA_STIME);
+    Extrapolator ext_y = Extrapolator(CAMERA_STIME);
+    Extrapolator ext_z = Extrapolator(CAMERA_STIME);
+    Extrapolator ext_q_w = Extrapolator(CAMERA_STIME);
+    Extrapolator ext_q_i = Extrapolator(CAMERA_STIME);
+    Extrapolator ext_q_j = Extrapolator(CAMERA_STIME);
+    Extrapolator ext_q_k = Extrapolator(CAMERA_STIME);
 
     std::atomic<uint64_t> timestamp_;
 
