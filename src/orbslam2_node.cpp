@@ -58,6 +58,17 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
 }
 
 /**
+ * @brief Returns the current time measured by the ROS 2 node, in seconds.
+ *
+ * @return Absolute time, in seconds.
+ */
+double ORBSLAM2Node::get_time(void)
+{
+    rclcpp::Time curr_ros2_time = this->now();
+    return (double)(curr_ros2_time.nanoseconds()) * 1e9;
+}
+
+/**
  * @brief Stores the latest PX4 timestamp.
  * 
  * @param msg Timesync message pointer.
@@ -110,7 +121,7 @@ void ORBSLAM2Node::setPose(cv::Mat _pose)
         Eigen::Quaternionf q(orMat);
 
         // Update extrapolators with latest sample data.
-        double new_T = GET_TIME();
+        double new_T = get_time();
         // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
         // Quaternions must follow the Hamiltonian convention.
         ext_x.updateSample(new_T, Twc.at<float>(2));
@@ -180,7 +191,7 @@ void ORBSLAM2Node::timer_vio_callback(void)
 
     // Get the rest from the extrapolators.
     poseMtx.lock();
-    double T = GET_TIME();
+    double T = get_time();  // Extrapolator takes new absolute sampling time.
     float q[4] = {(float)(ext_q_w.get(T)),
                   (float)(ext_q_i.get(T)),
                   (float)(ext_q_j.get(T)),

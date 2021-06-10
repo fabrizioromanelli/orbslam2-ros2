@@ -42,9 +42,6 @@ typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image,
 /* Camera sampling + processing time (accounts for ORB_SLAM2 computations too). */
 #define CAMERA_STIME 0.1
 
-/* Returns current time measured by a node. */
-#define GET_TIME() ((double)(this->now().nanoseconds()) * 1e9)
-
 /**
  * @brief ORB_SLAM2 node: publishes pose estimates on ROS 2/PX4 topics.
  */
@@ -55,6 +52,8 @@ public:
 
     void setPose(cv::Mat _pose);
     void setState(int32_t _state);
+
+    double get_time(void);
 
 private:
     void timer_vio_callback(void);
