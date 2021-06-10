@@ -98,9 +98,9 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::msg::Image::SharedPtr &msgRGB,
     mpORBSLAM2Node->setState(mpSLAM->GetTrackingState());
 
     // Publish camera sampling message.
-    std_msgs::msg::Bool sampling_msg{};
-    sampling_msg.set__data(true);
-    sampling_publisher_->publish(sampling_msg);
+    //std_msgs::msg::Bool sampling_msg{};
+    //sampling_msg.set__data(true);
+    //sampling_publisher_->publish(sampling_msg);
 }
 
 /**
@@ -139,7 +139,7 @@ void ImageGrabber::GrabStereo(const sensor_msgs::msg::Image::SharedPtr &msgLeft,
     mpORBSLAM2Node->setState(mpSLAM->GetTrackingState());
 
     // Publish camera sampling message.
-    std_msgs::msg::Bool sampling_msg{};
-    sampling_msg.set__data(true);
-    sampling_publisher_->publish(sampling_msg);
+    //std_msgs::msg::Bool sampling_msg{};
+    //sampling_msg.set__data(true);
+    //sampling_publisher_->publish(sampling_msg);
 }
