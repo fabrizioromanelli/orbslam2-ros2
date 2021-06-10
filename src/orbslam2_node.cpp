@@ -70,12 +70,57 @@ void ORBSLAM2Node::timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr m
 /**
  * @brief Setter method for pose member.
  *
- * @param _pose Pose matrix to store.
+ * @param _pose Pose data to store.
  */
 void ORBSLAM2Node::setPose(cv::Mat _pose)
 {
     poseMtx.lock();
-    orbslam2Pose = _pose;
+
+    if (_pose.empty())
+    {
+        // SLAM lost tracking: reset the extrapolators.
+        orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
+        ext_x.reset();
+        ext_y.reset();
+        ext_z.reset();
+        ext_q_w.reset();
+        ext_q_i.reset();
+        ext_q_j.reset();
+        ext_q_k.reset();
+    }
+    else
+    {
+        // Save latest pose.
+        orbslam2Pose = _pose;
+
+        // Extract measurements from latest pose sample.
+        cv::Mat Rwc = _pose.rowRange(0, 3).colRange(0, 3).t();
+        cv::Mat Twc = -Rwc * _pose.rowRange(0, 3).col(3);
+
+        Eigen::Matrix3f orMat;
+        orMat(0, 0) = _pose.at<float>(0, 0);
+        orMat(0, 1) = _pose.at<float>(0, 1);
+        orMat(0, 2) = _pose.at<float>(0, 2);
+        orMat(1, 0) = _pose.at<float>(1, 0);
+        orMat(1, 1) = _pose.at<float>(1, 1);
+        orMat(1, 2) = _pose.at<float>(1, 2);
+        orMat(2, 0) = _pose.at<float>(2, 0);
+        orMat(2, 1) = _pose.at<float>(2, 1);
+        orMat(2, 2) = _pose.at<float>(2, 2);
+        Eigen::Quaternionf q(orMat);
+
+        // Update extrapolators with latest sample data.
+        double new_T = GET_TIME();
+        // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
+        // Quaternions must follow the Hamiltonian convention.
+        ext_x.updateSample(new_T, Twc.at<float>(2));
+        ext_y.updateSample(new_T, Twc.at<float>(0));
+        ext_z.updateSample(new_T, Twc.at<float>(1));
+        ext_q_w.updateSample(new_T, q.w());
+        ext_q_i.updateSample(new_T, -q.z());
+        ext_q_j.updateSample(new_T, -q.x());
+        ext_q_k.updateSample(new_T, -q.y());
+    }
     poseMtx.unlock();
 }
 
@@ -98,7 +143,7 @@ void ORBSLAM2Node::timer_state_callback(void)
 {
     std_msgs::msg::Int32 msg{};
     stateMtx.lock();
-    msg.data = orbslam2State;
+    msg.set__data(orbslam2State);
     stateMtx.unlock();
     state_publisher_->publish(msg);
 }
@@ -112,61 +157,38 @@ void ORBSLAM2Node::timer_vio_callback(void)
     px4_msgs::msg::VehicleVisualOdometry message{};
 
     // Set message timestamp (from Timesync).
-    message.timestamp = msg_timestamp;
-    message.timestamp_sample = msg_timestamp;
+    message.set__timestamp(msg_timestamp);
+    message.set__timestamp_sample(msg_timestamp);
 
     // Set local frames of reference (these SHOULD be NED for PX4).
     // Note that velocity is not sent.
-    message.local_frame = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_NED;
-    message.velocity_frame = px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_NED;
+    message.set__local_frame(px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_NED);
+    message.set__velocity_frame(px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_NED);
 
     // Set unnecessary data fields: velocities and covariances.
     message.q_offset[0] = NAN;
     message.pose_covariance[0] = NAN;
     message.pose_covariance[15] = NAN;
-    message.vx = NAN;
-    message.vy = NAN;
-    message.vz = NAN;
-    message.rollspeed = NAN;
-    message.pitchspeed = NAN;
-    message.yawspeed = NAN;
+    message.set__vx(NAN);
+    message.set__vy(NAN);
+    message.set__vz(NAN);
+    message.set__rollspeed(NAN);
+    message.set__pitchspeed(NAN);
+    message.set__yawspeed(NAN);
     message.velocity_covariance[0] = NAN;
     message.velocity_covariance[15] = NAN;
 
-    // Get the rest from the pose estimate. Some computations are necessary.
+    // Get the rest from the extrapolators.
     poseMtx.lock();
-    if (orbslam2Pose.empty())
-    {
-        orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
-        message.x = NAN;
-        message.y = NAN;
-        message.z = NAN;
-        message.q[0] = NAN;
-    }
-    else
-    {
-        cv::Mat Rwc = orbslam2Pose.rowRange(0, 3).colRange(0, 3).t();
-        cv::Mat Twc = -Rwc * orbslam2Pose.rowRange(0, 3).col(3);
-
-        Eigen::Matrix3f orMat;
-        orMat(0, 0) = orbslam2Pose.at<float>(0, 0);
-        orMat(0, 1) = orbslam2Pose.at<float>(0, 1);
-        orMat(0, 2) = orbslam2Pose.at<float>(0, 2);
-        orMat(1, 0) = orbslam2Pose.at<float>(1, 0);
-        orMat(1, 1) = orbslam2Pose.at<float>(1, 1);
-        orMat(1, 2) = orbslam2Pose.at<float>(1, 2);
-        orMat(2, 0) = orbslam2Pose.at<float>(2, 0);
-        orMat(2, 1) = orbslam2Pose.at<float>(2, 1);
-        orMat(2, 2) = orbslam2Pose.at<float>(2, 2);
-        Eigen::Quaternionf q(orMat);
-
-        // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
-        // Quaternions must follow the Hamiltonian convention.
-        message.x = Twc.at<float>(2);
-        message.y = Twc.at<float>(0);
-        message.z = Twc.at<float>(1);
-        message.q = {q.w(), -q.z(), -q.x(), -q.y()};
-    }
+    double T = GET_TIME();
+    float q[4] = {(float)(ext_q_w.get(T)),
+                  (float)(ext_q_i.get(T)),
+                  (float)(ext_q_j.get(T)),
+                  (float)(ext_q_k.get(T)});
+    message.set__x((float)(ext_x.get(T)));
+    message.set__y((float)(ext_y.get(T)));
+    message.set__z((float)(ext_z.get(T)));
+    message.set__q(q);
     poseMtx.unlock();
 
     // Send it!

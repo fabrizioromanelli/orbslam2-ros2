@@ -3,10 +3,7 @@
 Extrapolator::Extrapolator(double T)
 {
 	tau = T;
-	Ss0 = 0;
-	Ss1 = 0;
-	
-	samplerecvd = 0;
+	this->reset();
 	
 	invTMtx[0][0] = 1 / (2 * tau * tau);
 	invTMtx[0][1] = - 1 / (tau * tau);
@@ -19,8 +16,16 @@ Extrapolator::Extrapolator(double T)
 	invTMtx[2][0] = 3;
 	invTMtx[2][1] = -3;
 	invTMtx[2][2] = 1;
+}
+
+void Extrapolator::reset(void)
+{
+    Ss0 = 0;
+	Ss1 = 0;
 	
-	a = 0;
+	samplerecvd = 0;
+
+    a = 0;
 	b = 0;
 	c = 0;
 }
@@ -49,6 +54,7 @@ void Extrapolator::updateSample(double T, double S)
 
 double Extrapolator::get(double T)
 {
+    if (samplerecvd < 2) return NAN;
 	double t = T - lastabsT;
 
 	return a * t * t + b * t + c;

@@ -39,6 +39,9 @@ typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image,
 /* Camera sampling + processing time (accounts for ORB_SLAM2 computations too). */
 #define CAMERA_STIME 0.1
 
+/* Returns current time measured by a node. */
+#define GET_TIME() ((double)(this->now().nanoseconds()) * 1e9)
+
 /**
  * @brief ORB_SLAM2 node: publishes pose estimates on ROS 2/PX4 topics.
  */
@@ -55,13 +58,13 @@ private:
     void timer_state_callback(void);
     void timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg);
 
-    Extrapolator x(CAMERA_STIME);
-    Extrapolator y(CAMERA_STIME);
-    Extrapolator z(CAMERA_STIME);
-    Extrapolator q_w(CAMERA_STIME);
-    Extrapolator q_i(CAMERA_STIME);
-    Extrapolator q_j(CAMERA_STIME);
-    Extrapolator q_k(CAMERA_STIME);
+    Extrapolator ext_x(CAMERA_STIME);
+    Extrapolator ext_y(CAMERA_STIME);
+    Extrapolator ext_z(CAMERA_STIME);
+    Extrapolator ext_q_w(CAMERA_STIME);
+    Extrapolator ext_q_i(CAMERA_STIME);
+    Extrapolator ext_q_j(CAMERA_STIME);
+    Extrapolator ext_q_k(CAMERA_STIME);
 
     std::atomic<uint64_t> timestamp_;
 
