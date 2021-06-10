@@ -65,7 +65,7 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
 double ORBSLAM2Node::get_time(void)
 {
     rclcpp::Time curr_ros2_time = this->now();
-    return (double)(curr_ros2_time.nanoseconds()) * 1e9;
+    return (double)(curr_ros2_time.nanoseconds()) * 1e-9;
 }
 
 /**
