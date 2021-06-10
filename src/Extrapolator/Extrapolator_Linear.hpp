@@ -17,4 +17,3 @@ class Extrapolator
 };
 
 #endif
-
