@@ -123,6 +123,7 @@ void ORBSLAM2Node::setPose(cv::Mat _pose)
 
         // Update extrapolators with latest sample data.
         double new_T = get_time();
+        RCLCPP_INFO(this->get_logger(), "SET T: %f", new_T);
         // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
         // Quaternions must follow the Hamiltonian convention.
         ext_x.updateSample(new_T, Twc.at<float>(2));
@@ -193,6 +194,7 @@ void ORBSLAM2Node::timer_vio_callback(void)
     // Get the rest from the extrapolators.
     poseMtx.lock();
     double T = get_time();  // Extrapolator takes new absolute sampling time.
+    RCLCPP_INFO(this-get_logger(), "GET T: %f", T);
     message.set__x((float)(ext_x.get(T)));
     message.set__y((float)(ext_y.get(T)));
     message.set__z((float)(ext_z.get(T)));
