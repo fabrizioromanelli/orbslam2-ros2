@@ -192,14 +192,13 @@ void ORBSLAM2Node::timer_vio_callback(void)
     // Get the rest from the extrapolators.
     poseMtx.lock();
     double T = get_time();  // Extrapolator takes new absolute sampling time.
-    float q[4] = {(float)(ext_q_w.get(T)),
-                  (float)(ext_q_i.get(T)),
-                  (float)(ext_q_j.get(T)),
-                  (float)(ext_q_k.get(T))};
     message.set__x((float)(ext_x.get(T)));
     message.set__y((float)(ext_y.get(T)));
     message.set__z((float)(ext_z.get(T)));
-    message.set__q(q);
+    message.q[0] = (float)(ext_q_w.get(T));
+    message.q[1] = (float)(ext_q_i.get(T));
+    message.q[2] = (float)(ext_q_j.get(T));
+    message.q[3] = (float)(ext_q_k.get(T));
     poseMtx.unlock();
 
     // Send it!
