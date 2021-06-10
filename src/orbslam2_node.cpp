@@ -85,6 +85,7 @@ void ORBSLAM2Node::timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr m
  */
 void ORBSLAM2Node::setPose(cv::Mat _pose)
 {
+    RCLCPP_INFO(this->get_logger(), "SET CALLED");
     poseMtx.lock();
 
     if (_pose.empty())
