@@ -31,14 +31,19 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
     auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, qos_profile.depth), qos_profile);
 
     // Initialize publishers.
+#ifdef PX4
     vio_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 10);
+#endif
     state_publisher_ = this->create_publisher<std_msgs::msg::Int32>("orbslam2_state", qos);
 
     // Create callback groups.
+#ifdef PX4
     timestamp_clbk_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+#endif
     state_clbk_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     vio_clbk_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
+#ifdef PX4
     // Subscribe to Timesync.
     auto timesync_sub_opt = rclcpp::SubscriptionOptions();
     timesync_sub_opt.callback_group = timestamp_clbk_group_;
@@ -47,12 +52,24 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
         10,
         std::bind(&ORBSLAM2Node::timestamp_callback, this, std::placeholders::_1),
         timesync_sub_opt);
+#endif
 
     // Activate timers for state and VIO publishing.
     // VIO: 50 ms period.
     // State: 100 ms period.
     vio_timer_ = this->create_wall_timer(50ms, std::bind(&ORBSLAM2Node::timer_vio_callback, this), vio_clbk_group_);
     state_timer_ = this->create_wall_timer(100ms, std::bind(&ORBSLAM2Node::timer_state_callback, this), state_clbk_group_);
+
+#ifdef EXTSAMPLER_QUAD
+    // Initialize quadratic extrasamplers.
+    ext_x = QuadFixTimeExtrasampler<double>(CAMERA_STIME);
+    ext_y = QuadFixTimeExtrasampler<double>(CAMERA_STIME);
+    ext_z = QuadFixTimeExtrasampler<double>(CAMERA_STIME);
+    ext_q_w = QuadFixTimeExtrasampler<double>(CAMERA_STIME);
+    ext_q_i = QuadFixTimeExtrasampler<double>(CAMERA_STIME);
+    ext_q_j = QuadFixTimeExtrasampler<double>(CAMERA_STIME);
+    ext_q_k = QuadFixTimeExtrasampler<double>(CAMERA_STIME);
+#endif
 
     RCLCPP_INFO(this->get_logger(), "Node initialized.");
 }
@@ -73,10 +90,12 @@ double ORBSLAM2Node::get_time(void)
  * 
  * @param msg Timesync message pointer.
  */
+#ifdef PX4
 void ORBSLAM2Node::timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg)
 {
     timestamp_.store(msg->timestamp, std::memory_order_release);
 }
+#endif
 
 /**
  * @brief Setter method for pose member.
@@ -88,8 +107,10 @@ void ORBSLAM2Node::setPose(cv::Mat _pose)
     poseMtx.lock();
     if (_pose.empty())
     {
-        // SLAM lost tracking: reset the extrapolators.
+        // SLAM lost tracking.
         orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
+#if defined(EXTSAMPLER_LIN) || defined(EXTSAMPLER_QUAD)
+        // Reset the extrapolators.
         ext_x.reset();
         ext_y.reset();
         ext_z.reset();
@@ -97,6 +118,7 @@ void ORBSLAM2Node::setPose(cv::Mat _pose)
         ext_q_i.reset();
         ext_q_j.reset();
         ext_q_k.reset();
+#endif
         RCLCPP_WARN(this->get_logger(), "SLAM lost tracking.");
     }
     else
@@ -104,6 +126,7 @@ void ORBSLAM2Node::setPose(cv::Mat _pose)
         // Save latest pose.
         orbslam2Pose = _pose;
 
+#if defined(EXTSAMPLER_LIN) || defined(EXTSAMPLER_QUAD)
         // Extract measurements from latest pose sample.
         cv::Mat Rwc = _pose.rowRange(0, 3).colRange(0, 3).t();
         cv::Mat Twc = -Rwc * _pose.rowRange(0, 3).col(3);
@@ -124,13 +147,14 @@ void ORBSLAM2Node::setPose(cv::Mat _pose)
         double new_T = get_time();
         // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
         // Quaternions must follow the Hamiltonian convention.
-        ext_x.updateSample(new_T, Twc.at<float>(2));
-        ext_y.updateSample(new_T, Twc.at<float>(0));
-        ext_z.updateSample(new_T, Twc.at<float>(1));
-        ext_q_w.updateSample(new_T, q.w());
-        ext_q_i.updateSample(new_T, -q.z());
-        ext_q_j.updateSample(new_T, -q.x());
-        ext_q_k.updateSample(new_T, -q.y());
+        ext_x.update_samples(new_T, Twc.at<float>(2));
+        ext_y.update_samples(new_T, Twc.at<float>(0));
+        ext_z.update_samples(new_T, Twc.at<float>(1));
+        ext_q_w.update_samples(new_T, q.w());
+        ext_q_i.update_samples(new_T, -q.z());
+        ext_q_j.update_samples(new_T, -q.x());
+        ext_q_k.update_samples(new_T, -q.y());
+#endif
     }
     poseMtx.unlock();
 }
@@ -164,6 +188,7 @@ void ORBSLAM2Node::timer_state_callback(void)
  */
 void ORBSLAM2Node::timer_vio_callback(void)
 {
+#ifdef PX4
     uint64_t msg_timestamp = timestamp_.load(std::memory_order_acquire);
     px4_msgs::msg::VehicleVisualOdometry message{};
 
@@ -189,18 +214,44 @@ void ORBSLAM2Node::timer_vio_callback(void)
     message.velocity_covariance[0] = NAN;
     message.velocity_covariance[15] = NAN;
 
-    // Get the rest from the extrapolators.
     poseMtx.lock();
-    double T = get_time();  // Extrapolator takes new absolute sampling time.
-    message.set__x((float)(ext_x.get(T)));
-    message.set__y((float)(ext_y.get(T)));
-    message.set__z((float)(ext_z.get(T)));
-    message.q[0] = (float)(ext_q_w.get(T));
-    message.q[1] = (float)(ext_q_i.get(T));
-    message.q[2] = (float)(ext_q_j.get(T));
-    message.q[3] = (float)(ext_q_k.get(T));
+#if defined(EXTSAMPLER_LIN) || defined(EXTSAMPLER_QUAD)
+    // Get the rest from the extrapolators.
+    double T = get_time(); // Extrapolator takes new absolute sampling time.
+    message.set__x((float)(ext_x.get_sample(T)));
+    message.set__y((float)(ext_y.get_sample(T)));
+    message.set__z((float)(ext_z.get_sample(T)));
+    message.q[0] = (float)(ext_q_w.get_sample(T));
+    message.q[1] = (float)(ext_q_i.get_sample(T));
+    message.q[2] = (float)(ext_q_j.get_sample(T));
+    message.q[3] = (float)(ext_q_k.get_sample(T));
+#else
+    // Get the rest from the last stored pose.
+    cv::Mat Rwc = orbslam2Pose.rowRange(0, 3).colRange(0, 3).t();
+    cv::Mat Twc = -Rwc * orbslam2Pose.rowRange(0, 3).col(3);
+
+    Eigen::Matrix3f orMat;
+    orMat(0, 0) = orbslam2Pose.at<float>(0, 0);
+    orMat(0, 1) = orbslam2Pose.at<float>(0, 1);
+    orMat(0, 2) = orbslam2Pose.at<float>(0, 2);
+    orMat(1, 0) = orbslam2Pose.at<float>(1, 0);
+    orMat(1, 1) = orbslam2Pose.at<float>(1, 1);
+    orMat(1, 2) = orbslam2Pose.at<float>(1, 2);
+    orMat(2, 0) = orbslam2Pose.at<float>(2, 0);
+    orMat(2, 1) = orbslam2Pose.at<float>(2, 1);
+    orMat(2, 2) = orbslam2Pose.at<float>(2, 2);
+    Eigen::Quaternionf q(orMat);
+
+    // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
+    // Quaternions must follow the Hamiltonian convention.
+    message.set__x(Twc.at<float>(2));
+    message.set__y(Twc.at<float>(0));
+    message.set__z(Twc.at<float>(1));
+    message.q = {q.w(), -q.z(), -q.x(), -q.y()};
+#endif
     poseMtx.unlock();
 
     // Send it!
     vio_publisher_->publish(message);
+#endif
 }
