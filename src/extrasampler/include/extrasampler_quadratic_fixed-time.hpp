@@ -35,7 +35,7 @@ template <typename NumericType>
 class QuadFixTimeExtrasampler : public Extrasampler<NumericType>
 {
 public:
-    QuadFixTimeExtrasampler(NumericType tau);
+    QuadFixTimeExtrasampler(NumericType tau = NumericType(1));
     NumericType get_sample(NumericType time);
     void update_samples(NumericType new_time, NumericType new_sample);
     void reset(void);
