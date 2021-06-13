@@ -34,6 +34,15 @@ else()
   include_directories(/usr/local/include/ORB_SLAM2)
 endif()
 
+# Compilation options to set various features of the nodes.
+# Activate them when building with colcon using:
+# colcon build [...] --ament-cmake-args "-DOPTION=ON/OFF [...]" [...]
+option(PX4 "Enables publishers of VIO data for PX4." OFF)
+option(SMT "Enables multithreaded processing." ON)
+option(EXTSAMPLER_LIN "Enables linear-approximation oversampling." OFF)
+option(EXTSAMPLER_QUAD "Enables quadratic-approximation oversampling." OFF)
+option(BENCHMARK "Enables publishing on CameraSampling topic for performance measurements." ON)
+
 set(LIBS -lfbow
          -lDLib
          -lg2o
@@ -56,6 +65,23 @@ ament_target_dependencies(${PROJECT_NAME} rclcpp
                                           px4_msgs)
 
 target_link_libraries(${PROJECT_NAME} ${LIBS})
+
+# Activate features in the code from the options described above.
+if(PX4)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC PX4)
+endif()
+if(SMT)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC SMT)
+endif()
+if(EXTSAMPLER_LIN)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC EXTSAMPLER_LIN)
+endif()
+if(EXTSAMPLER_QUAD)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC EXTSAMPLER_QUAD)
+endif()
+if(BENCHMARK)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC BENCHMARK)
+endif()
 
 install(DIRECTORY launch
         DESTINATION share/${PROJECT_NAME})
