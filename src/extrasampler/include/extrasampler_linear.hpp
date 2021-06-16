@@ -30,11 +30,11 @@
 /**
  * @brief Extends extrasampler's base adding linear extrapolation methods.
  */
-template <typename NumericType>
+template <typename NumericType, unsigned int Samples>
 class LinearExtrasampler : public Extrasampler<NumericType>
 {
 public:
-    LinearExtrasampler(NumericType init_time = NumericType(0), NumericType init_sample = NumericType(0));
+    LinearExtrasampler();
     NumericType get_sample(NumericType time);
     void update_samples(NumericType new_time, NumericType new_sample);
     void reset(void);
@@ -42,8 +42,9 @@ public:
 private:
     NumericType a_;
     NumericType b_;
-    NumericType prev_sample_time_;
-    NumericType prev_sample_;
+    NumericType samples_buffer_[Samples];
+    NumericType times_buffer_[Samples];
+    unsigned int new_sample_index_;
 };
 
 #include "extrasampler_linear.ipp"

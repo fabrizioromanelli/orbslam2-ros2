@@ -40,6 +40,7 @@ QuadFixTimeExtrasampler<NumericType>::QuadFixTimeExtrasampler(NumericType tau)
         throw std::invalid_argument("Null sampling time.");
     // Set private members.
     tau_ = tau;
+    this->samples_rcvd_ = 0;
     this->reset();
     // Initialize coefficients matrix, computed with given tau.
     inv_tau_mat_[0][0] = NumericType(1) / (NumericType(2) * tau * tau);

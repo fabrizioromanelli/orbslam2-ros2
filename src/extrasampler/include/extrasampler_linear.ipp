@@ -25,18 +25,19 @@
 #ifndef LINEAR_EXTRASAMPLER_IPP
 #define LINEAR_EXTRASAMPLER_IPP
 
+#include <math.h>
+
 /**
  * @brief Creates a linear extrasampler.
  *
  * @param init_time Initial value of the last sample acquisition time.
  * @param init_sample First available sample.
  */
-template <typename NumericType>
-LinearExtrasampler<NumericType>::LinearExtrasampler(NumericType init_time, NumericType init_sample)
+template <typename NumericType, unsigned int Samples>
+LinearExtrasampler<NumericType, Samples>::LinearExtrasampler()
 {
     // Set private members.
-    prev_sample_time_ = init_time;
-    prev_sample_ = init_sample;
+    this->reset();
 }
 
 /**
@@ -45,11 +46,15 @@ LinearExtrasampler<NumericType>::LinearExtrasampler(NumericType init_time, Numer
  * @param time Time at which to compute the new sample.
  * @return New extrapolated sample.
  */
-template <typename NumericType>
-NumericType LinearExtrasampler<NumericType>::get_sample(NumericType time)
+template <typename NumericType, unsigned int Samples>
+NumericType LinearExtrasampler<NumericType, Samples>::get_sample(NumericType time)
 {
-    // Simply apply a linear approximation.
-    return a_ * time + b_;
+    if (this->samples_rcvd_ == Samples)
+    {
+        // Simply apply a linear approximation.
+        return a_ * time + b_;
+    }
+    return NAN;
 }
 
 /**
@@ -58,27 +63,60 @@ NumericType LinearExtrasampler<NumericType>::get_sample(NumericType time)
  * @param new_time Acquisition time.
  * @param new_sample Newly acquired sample.
  */
-template <typename NumericType>
-void LinearExtrasampler<NumericType>::update_samples(NumericType new_time, NumericType new_sample)
+template <typename NumericType, unsigned int Samples>
+void LinearExtrasampler<NumericType, Samples>::update_samples(NumericType new_time, NumericType new_sample)
 {
-    // Recompute linear approximation coefficients using new data.
-    a_ = (new_sample - prev_sample_) / (new_time - prev_sample_time_);
-    b_ = prev_sample_ - a_ * prev_sample_time_;
-    // Store new values.
-    prev_sample_ = new_sample;
-    prev_sample_time_ = new_time;
+    // Store latest sample.
+    times_buffer_[new_sample_index_] = new_time;
+    samples_buffer_[new_sample_index_] = new_sample;
+    new_sample_index_ = (new_sample_index_ + 1) % Samples;
+    if (this->samples_rcvd_ == Samples)
+    {
+        // Compute new times and samples averages.
+        NumericType t_avg = NumericType(0);
+        NumericType s_avg = NumericType(0);
+        for (unsigned int i = 0; i < Samples; i++)
+        {
+            t_avg += times_buffer_[i];
+            s_avg += samples_buffer_[i];
+        }
+        t_avg /= NumericType(Samples);
+        s_avg /= NumericType(Samples);
+        // Compute new linear regression coefficients.
+        NumericType Sxx = NumericType(0);
+        NumericType Sxy = NumericType(0);
+        for (unsigned int i = 0; i < Samples; i++)
+        {
+            Sxx += (times_buffer_[i] - t_avg) * (times_buffer_[i] - t_avg);
+            Sxy += (times_buffer_[i] - t_avg) * (samples_buffer_[i] - s_avg);
+        }
+        Sxx /= NumericType(Samples);
+        Sxy /= NumericType(Samples);
+        // Compute new linear extrapolation coefficients.
+        b_ = Sxx / Sxy;
+        a_ = s_avg - b_ * t_avg;
+    }
+    else
+    {
+        this->samples_rcvd_++;
+    }
 }
 
 /**
  * @brief Resets the internal state of the extrasampler.
  */
-template <typename NumericType>
-void LinearExtrasampler<NumericType>::reset(void)
+template <typename NumericType, unsigned int Samples>
+void LinearExtrasampler<NumericType, Samples>::reset(void)
 {
     a_ = NumericType(0);
     b_ = NumericType(0);
-    prev_sample_ = NumericType(0);
-    prev_sample_time_ = NumericType(0);
+    for (unsigned int i = 0; i < Samples; i++)
+    {
+        samples_buffer_[i] = NumericType(0);
+        times_buffer_[i] = NumericType(0);
+    }
+    new_sample_index_ = 0;
+    this->samples_rcvd_ = 0;
 }
 
 #endif
