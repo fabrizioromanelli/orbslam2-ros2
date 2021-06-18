@@ -51,8 +51,7 @@ set(LIBS -lfbow
 
 add_executable(${PROJECT_NAME} src/orbslam2_ros2.cpp
                                src/orbslam2_node.cpp
-                               src/image_grabber_node.cpp
-                               src/Extrapolator/Extrapolator_Quadratic_FixedTime.cpp)
+                               src/image_grabber_node.cpp)
 
 ament_target_dependencies(${PROJECT_NAME} rclcpp
                                           std_msgs
