@@ -13,6 +13,12 @@
 
 #include "../include/orbslam2-ros2/orbslam2_ros2.hpp"
 
+#ifdef SMT
+#pragma message "Generating multithreaded VIO process..."
+#else
+#pragma message "Generating single-threaded VIO process..."
+#endif
+
 /**
  * @brief ImageGrabber node spinner thread routine.
  *
