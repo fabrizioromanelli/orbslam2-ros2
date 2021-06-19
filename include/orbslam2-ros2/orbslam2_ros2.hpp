@@ -7,6 +7,9 @@
  * @date May 26, 2021
  */
 
+#ifndef ORBSLAM2_ROS2_HPP
+#define ORBSLAM2_ROS2_HPP
+
 #include <memory>
 #include <chrono>
 #include <mutex>
@@ -149,3 +152,5 @@ private:
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr sampling_publisher_;
 #endif
 };
+
+#endif
