@@ -27,14 +27,12 @@
 
 /* Linear extrapolation oversampling algorithm. */
 #ifdef EXTSAMPLER_LIN
-#pragma message "Linear n-samples-filter extrasampler activated."
 #include "../../src/extrasampler/include/extrasampler_linear.hpp"
 #define SAMPLES 4
 #endif
 
 /* Quadratic extrapolation oversampling algorithm. */
 #ifdef EXTSAMPLER_QUAD
-#pragma message "Quadratic fixed-sampling-time extrasampler activated."
 #include "../../src/extrasampler/include/extrasampler_quadratic_fixed-time.hpp"
 #define CAMERA_STIME 0.067 // Camera sampling + processing time (accounts for ORB_SLAM2 computations too).
 #endif
@@ -45,7 +43,6 @@
 
 /* PX4 messages. */
 #ifdef PX4
-#pragma message "Activated publishers and subscribers for PX4 topics."
 #include <px4_msgs/msg/timesync.hpp>
 #include <px4_msgs/msg/vehicle_visual_odometry.hpp>
 #endif
@@ -55,7 +52,6 @@
 
 /* Camera sampling messages. */
 #ifdef BENCHMARK
-#pragma message "Activated dummy publisher for VIO processing pipeline performance monitoring."
 #include <std_msgs/msg/bool.hpp>
 #endif
 

@@ -19,6 +19,22 @@
 #pragma message "Generating single-threaded VIO process..."
 #endif
 
+#ifdef EXTSAMPLER_LIN
+#pragma message "Linear n-samples-filter extrasampler activated."
+#endif
+
+#ifdef EXTSAMPLER_QUAD
+#pragma message "Quadratic fixed-sampling-time extrasampler activated."
+#endif
+
+#ifdef PX4
+#pragma message "Activated publishers and subscribers for PX4 topics."
+#endif
+
+#ifdef BENCHMARK
+#pragma message "Activated dummy publisher for VIO processing pipeline performance monitoring."
+#endif
+
 /**
  * @brief ImageGrabber node spinner thread routine.
  *
