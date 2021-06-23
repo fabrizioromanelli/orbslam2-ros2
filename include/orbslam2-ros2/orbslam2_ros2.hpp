@@ -28,7 +28,9 @@
 /* Linear extrapolation oversampling algorithm. */
 #ifdef EXTSAMPLER_LIN
 #include "../extrasampler/extrasampler_linear.hpp"
+#ifndef SAMPLES
 #define SAMPLES 4
+#endif
 #endif
 
 /* Quadratic extrapolation oversampling algorithm. */
