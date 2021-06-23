@@ -79,7 +79,7 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
  *
  * @return Absolute time, in seconds.
  */
-//#if defined(EXTSAMPLER_LIN) || defined(EXTSAMPLER_QUAD)
+#if defined(EXTSAMPLER_LIN) || defined(EXTSAMPLER_QUAD)
 #include <time.h>
 #include <string.h>
 
@@ -96,7 +96,7 @@ double ORBSLAM2Node::get_time(void)
     time = (double)(now.tv_sec) + ((double)(now.tv_nsec) * 1e-9);
     return time;
 }
-//#endif
+#endif
 
 /**
  * @brief Stores the latest PX4 timestamp.
