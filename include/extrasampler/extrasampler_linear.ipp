@@ -73,7 +73,7 @@ void LinearExtrasampler<NumericType, Samples>::update_samples(NumericType new_ti
     if (this->samples_rcvd_ == Samples)
     {
         // Update linear regressor coefficients.
-        NumericType sigmaxy = sum_and_mulitply(times_buffer_, samples_buffer_);
+        NumericType sigmaxy = sum_and_multiply(times_buffer_, samples_buffer_);
         NumericType sigmaxx = sum_and_multiply(times_buffer_, times_buffer_);
         NumericType sigmax = sum(times_buffer_);
         NumericType sigmay = sum(samples_buffer_);
