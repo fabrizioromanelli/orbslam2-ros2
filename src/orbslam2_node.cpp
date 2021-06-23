@@ -79,11 +79,24 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
  *
  * @return Absolute time, in seconds.
  */
+#if defined(EXTSAMPLER_LIN) || defined(EXTSAMPLER_QUAD)
+#include <time.h>
+#include <string.h>
+
 double ORBSLAM2Node::get_time(void)
 {
-    rclcpp::Time curr_ros2_time = this->now();
-    return (double)(curr_ros2_time.nanoseconds()) * 1e-9;
+    double time = 0.0;
+    struct timespec now;
+    memset(&now, 0, sizeof(now));
+    if (clock_gettime(CLOCK_MONOTONIC, &now) == -1)
+    {
+        RCLCPP_FATAL(this->get_logger(), "Failed to get time from system.");
+        exit(EXIT_FAILURE);
+    }
+    time = (double)(now.tv_sec) + ((double)(now.tv_nsec) * 1e-9);
+    return time;
 }
+#endif
 
 /**
  * @brief Stores the latest PX4 timestamp.
