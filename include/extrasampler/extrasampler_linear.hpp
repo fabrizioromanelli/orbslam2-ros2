@@ -45,6 +45,8 @@ private:
     NumericType samples_buffer_[Samples];
     NumericType times_buffer_[Samples];
     unsigned int new_sample_index_;
+    NumericType sum(NumericType *var);
+    NumericType sum_and_multiply(NumericType *var1, NumericType *var2);
 };
 
 #include "extrasampler_linear.ipp"

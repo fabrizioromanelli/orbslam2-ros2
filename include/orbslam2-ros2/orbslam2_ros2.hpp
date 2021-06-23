@@ -20,6 +20,9 @@
 #include <opencv2/core/core.hpp>
 #include <ORB_SLAM2/System.h>
 
+#define EXTSAMPLER_LIN
+#define EXTSAMPLER_QUAD
+
 /* Preprocessor consistency checks. */
 #if defined(EXTSAMPLER_LIN) && defined(EXTSAMPLER_QUAD)
 #error "Only one extrasampler is allowed."
@@ -27,14 +30,16 @@
 
 /* Linear extrapolation oversampling algorithm. */
 #ifdef EXTSAMPLER_LIN
-#include "../../src/extrasampler/include/extrasampler_linear.hpp"
+#include "../extrasampler/extrasampler_linear.hpp"
 #define SAMPLES 4
 #endif
 
 /* Quadratic extrapolation oversampling algorithm. */
 #ifdef EXTSAMPLER_QUAD
-#include "../../src/extrasampler/include/extrasampler_quadratic_fixed-time.hpp"
+#include "../extrasampler/extrasampler_quadratic_fixed-time.hpp"
+#ifndef CAMERA_STIME
 #define CAMERA_STIME 0.067 // Camera sampling + processing time (accounts for ORB_SLAM2 computations too).
+#endif
 #endif
 
 /* Node names. */

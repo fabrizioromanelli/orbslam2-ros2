@@ -72,34 +72,50 @@ void LinearExtrasampler<NumericType, Samples>::update_samples(NumericType new_ti
     new_sample_index_ = (new_sample_index_ + 1) % Samples;
     if (this->samples_rcvd_ == Samples)
     {
-        // Compute new times and samples averages.
-        NumericType t_avg = NumericType(0);
-        NumericType s_avg = NumericType(0);
-        for (unsigned int i = 0; i < Samples; i++)
-        {
-            t_avg += times_buffer_[i];
-            s_avg += samples_buffer_[i];
-        }
-        t_avg /= NumericType(Samples);
-        s_avg /= NumericType(Samples);
-        // Compute new linear regression coefficients.
-        NumericType Sxx = NumericType(0);
-        NumericType Sxy = NumericType(0);
-        for (unsigned int i = 0; i < Samples; i++)
-        {
-            Sxx += (times_buffer_[i] - t_avg) * (times_buffer_[i] - t_avg);
-            Sxy += (times_buffer_[i] - t_avg) * (samples_buffer_[i] - s_avg);
-        }
-        Sxx /= NumericType(Samples);
-        Sxy /= NumericType(Samples);
-        // Compute new linear extrapolation coefficients.
-        b_ = Sxx / Sxy;
-        a_ = s_avg - b_ * t_avg;
+        // Update linear regressor coefficients.
+        NumericType sigmaxy = sum_and_mulitply(times_buffer_, samples_buffer_);
+        NumericType sigmaxx = sum_and_multiply(times_buffer_, times_buffer_);
+        NumericType sigmax = sum(times_buffer_);
+        NumericType sigmay = sum(samples_buffer_);
+
+        b_ = (NumericType(Samples) * sigmaxy - sigmax * sigmay) / (NumericType(Samples) * sigmaxx - sigmax * sigmax);
+        a_ = (sigmay * sigmaxx - sigmax * sigmaxy) / (NumericType(Samples) * sigmaxx - sigmax * sigmax);
     }
     else
     {
         this->samples_rcvd_++;
     }
+}
+
+/**
+ * @brief Sums over an array of values.
+ *
+ * @param var Pointer to the array to sum over.
+ * @return Sum.
+ */
+template <typename NumericType, unsigned int Samples>
+NumericType LinearExtrasampler<NumericType, Samples>::sum(NumericType *var)
+{
+    NumericType accumulator(0);
+    for (unsigned int i = 0; i < Samples; i++)
+        accumulator += var[i];
+    return accumulator;
+}
+
+/**
+ * @brief Computes the dot product of two arrays of values.
+ *
+ * @param var1 First array pointer.
+ * @param var2 Second array pointer.
+ * @return Dot product result.
+ */
+template <typename NumericType, unsigned int Samples>
+NumericType LinearExtrasampler<NumericType, Samples>::sum_and_multiply(NumericType *var1, NumericType *var2)
+{
+    NumericType accumulator(0);
+    for (unsigned int i = 0; i < Samples; i++)
+        accumulator += (var1[i] * var2[i]);
+    return accumulator;
 }
 
 /**
