@@ -37,8 +37,8 @@ endif()
 # Compilation options to set various features of the nodes.
 # Activate them when building with colcon using:
 # colcon build [...] --ament-cmake-args "-DOPTION=ON/OFF [...]" [...]
-option(PX4 "Enable publishers of VIO data for PX4." OFF)
-option(SMT "Enable multithreaded processing." ON)
+option(PX4VIO "Enable publishers of VIO data for PX4." OFF)
+option(MT "Enable multithreaded processing." ON)
 option(ELIN "Enable linear-approximation oversampling." OFF)
 option(EQUAD "Enable quadratic-approximation oversampling." OFF)
 option(BENCH "Enable publishing on CameraSampling topic for performance measurements." ON)
@@ -66,11 +66,11 @@ ament_target_dependencies(${PROJECT_NAME} rclcpp
 target_link_libraries(${PROJECT_NAME} ${LIBS})
 
 # Activate features in the code from the options described above.
-if(PX4)
+if(PX4VIO)
     message(STATUS "Activating PX4 integrations...")
     target_compile_definitions(${PROJECT_NAME} PUBLIC PX4)
 endif()
-if(SMT)
+if(MT)
     message(STATUS "Selecting parallel implementation...")
     target_compile_definitions(${PROJECT_NAME} PUBLIC SMT)
 endif()
