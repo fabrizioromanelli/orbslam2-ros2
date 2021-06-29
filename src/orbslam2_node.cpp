@@ -238,6 +238,15 @@ void ORBSLAM2Node::timer_vio_callback(void)
     message.q[1] = (float)(ext_q_i.get_sample(T));
     message.q[2] = (float)(ext_q_j.get_sample(T));
     message.q[3] = (float)(ext_q_k.get_sample(T));
+    // Quaternions must be normalized first.
+    float q_norm = sqrt(message.q[0] * message.q[0] +
+                        message.q[1] * message.q[1] +
+                        message.q[2] * message.q[2] +
+                        message.q[3] * message.q[3]);
+    message.q[0] /= q_norm;
+    message.q[1] /= q_norm;
+    message.q[2] /= q_norm;
+    message.q[3] /= q_norm;
 #else
     // Get the rest from the last stored pose.
     cv::Mat Rwc = orbslam2Pose.rowRange(0, 3).colRange(0, 3).t();
