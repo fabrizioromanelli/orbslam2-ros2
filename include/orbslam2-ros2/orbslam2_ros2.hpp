@@ -29,7 +29,7 @@
 #ifdef EXTSAMPLER_LIN
 #include "../extrasampler/extrasampler_linear.hpp"
 #ifndef SAMPLES
-#define SAMPLES 4
+#define SAMPLES 8
 #endif
 #endif
 
