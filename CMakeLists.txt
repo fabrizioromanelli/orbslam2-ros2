@@ -1,4 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
+
+# Set default build type.
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Default build type: Release." FORCE)
+endif()
+
 project(orbslam2)
 
 # Default to C++14
@@ -43,6 +49,20 @@ option(SMT "Enable multithreaded processing." ON)
 option(ELIN "Enable linear-approximation oversampling." OFF)
 option(EQUAD "Enable quadratic-approximation oversampling." OFF)
 option(BENCH "Enable publishing on CameraSampling topic for performance measurements." ON)
+option(DEBUG "Enable debug symbols and related compilation options." OFF)
+
+# Activate debugging features.
+if(DEBUG)
+    message(STATUS "Activating debugging features...")
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Release mode with debug symbols." FORCE)
+endif()
+
+# Check build type.
+if(CMAKE_BUILD_TYPE MATCHES Release)
+    message(STATUS "Release build type selected.")
+elseif(CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
+    message(STATUS "RelWithDebInfo build type selected.")
+endif()
 
 set(LIBS -lfbow
          -lDLib
