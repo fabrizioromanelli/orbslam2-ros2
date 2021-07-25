@@ -61,7 +61,7 @@ ImageGrabber::ImageGrabber(ORB_SLAM2::System *pSLAM,
     sampling_publisher_ = this->create_publisher<std_msgs::msg::Bool>("CameraSampling", 10);
 #endif
 
-    RCLCPP_INFO(this->get_logger(), "Node initialized.");
+    RCLCPP_INFO(this->get_logger(), "Node initialized");
 }
 
 /**

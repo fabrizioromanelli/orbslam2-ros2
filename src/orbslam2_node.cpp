@@ -71,7 +71,7 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
     ext_q_k = QuadFixTimeExtrasampler<double>(CAMERA_STIME);
 #endif
 
-    RCLCPP_INFO(this->get_logger(), "Node initialized.");
+    RCLCPP_INFO(this->get_logger(), "Node initialized");
 }
 
 /**
@@ -90,7 +90,7 @@ double ORBSLAM2Node::get_time(void)
     memset(&now, 0, sizeof(now));
     if (clock_gettime(CLOCK_MONOTONIC, &now) == -1)
     {
-        RCLCPP_FATAL(this->get_logger(), "Failed to get time from system.");
+        RCLCPP_FATAL(this->get_logger(), "Failed to get time from system");
         exit(EXIT_FAILURE);
     }
     time = (double)(now.tv_sec) + ((double)(now.tv_nsec) * 1e-9);
@@ -132,7 +132,7 @@ void ORBSLAM2Node::setPose(cv::Mat _pose)
         ext_q_j.reset();
         ext_q_k.reset();
 #endif
-        RCLCPP_WARN(this->get_logger(), "VSLAM tracking lost.");
+        RCLCPP_WARN(this->get_logger(), "VSLAM tracking lost");
     }
     else
     {
