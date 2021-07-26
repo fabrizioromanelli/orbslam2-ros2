@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 
 # Set default build type.
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Default build type: Release." FORCE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Default build type: Release" FORCE)
 endif()
 
 project(orbslam2)
@@ -44,24 +44,24 @@ endif()
 # Activate them when building with colcon using:
 # colcon build [...] --ament-cmake-args "-DOPTION=ON/OFF" "[...]" [...]
 # Quote each option separately!!!
-option(PX4 "Enable publishers of VIO data for PX4." OFF)
-option(SMT "Enable multithreaded processing." ON)
-option(ELIN "Enable linear-approximation oversampling." OFF)
-option(EQUAD "Enable quadratic-approximation oversampling." OFF)
-option(BENCH "Enable publishing on CameraSampling topic for performance measurements." ON)
-option(DEBUG "Enable debug symbols and related compilation options." OFF)
+option(PX4 "Enable publishers of VIO data for PX4" OFF)
+option(SMT "Enable multithreaded processing" ON)
+option(ELIN "Enable linear-approximation oversampling" OFF)
+option(EQUAD "Enable quadratic-approximation oversampling" OFF)
+option(BENCH "Enable publishing on CameraSampling topic for performance measurements" ON)
+option(DEBUG "Enable debug symbols and related compilation options" OFF)
 
 # Activate debugging features.
 if(DEBUG)
-    message(STATUS "Activating debugging features...")
-    set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Release mode with debug symbols." FORCE)
+    message(STATUS "Activating debugging features")
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Debug build" FORCE)
 endif()
 
 # Check build type.
 if(CMAKE_BUILD_TYPE MATCHES Release)
-    message(STATUS "Release build type selected.")
+    message(STATUS "Release build type selected")
 elseif(CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
-    message(STATUS "RelWithDebInfo build type selected.")
+    message(STATUS "Debug build type selected")
 endif()
 
 set(LIBS -lfbow
@@ -88,23 +88,23 @@ target_link_libraries(${PROJECT_NAME} ${LIBS})
 
 # Activate features in the code from the options described above.
 if(PX4)
-    message(STATUS "Activating PX4 integrations...")
+    message(STATUS "Activating PX4 integrations")
     target_compile_definitions(${PROJECT_NAME} PUBLIC PX4)
 endif()
 if(SMT)
-    message(STATUS "Selecting parallel implementation...")
+    message(STATUS "Selecting parallel implementation")
     target_compile_definitions(${PROJECT_NAME} PUBLIC SMT)
 endif()
 if(ELIN)
-    message(STATUS "Including linear extrasampler...")
+    message(STATUS "Including linear extrasampler")
     target_compile_definitions(${PROJECT_NAME} PUBLIC EXTSAMPLER_LIN)
 endif()
 if(EQUAD)
-    message(STATUS "Including quadratic extrasampler...")
+    message(STATUS "Including quadratic extrasampler")
     target_compile_definitions(${PROJECT_NAME} PUBLIC EXTSAMPLER_QUAD)
 endif()
 if(BENCH)
-    message(STATUS "Activating VIO pipeline benchmarking tools...")
+    message(STATUS "Activating VIO pipeline benchmarking tools")
     target_compile_definitions(${PROJECT_NAME} PUBLIC BENCHMARK)
 endif()
 
