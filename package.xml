@@ -11,7 +11,6 @@
 
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
-  <depend>px4_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>realsense2_camera_msgs</depend>
   <depend>realsense2_description</depend>

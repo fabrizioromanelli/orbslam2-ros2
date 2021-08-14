@@ -47,6 +47,7 @@
 
 /* PX4 messages. */
 #ifdef PX4
+#include <afg_interfaces/msg/internal_error.hpp>
 #include <px4_msgs/msg/timesync.hpp>
 #include <px4_msgs/msg/vehicle_visual_odometry.hpp>
 #endif
@@ -104,6 +105,7 @@ private:
     std::atomic<uint64_t> timestamp_;
     rclcpp::CallbackGroup::SharedPtr timestamp_clbk_group_;
     rclcpp::Publisher<px4_msgs::msg::VehicleVisualOdometry>::SharedPtr vio_publisher_;
+    rclcpp::Publisher<afg_interfaces::msg::InternalError>::SharedPtr error_pub_;
     rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr ts_sub_;
 #endif
 
