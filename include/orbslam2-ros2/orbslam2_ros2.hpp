@@ -76,7 +76,9 @@ public:
     void setPose(cv::Mat _pose);
     void setState(int32_t _state);
 
+#if defined(EXTSAMPLER_LIN) || defined(EXTSAMPLER_QUAD)
     double get_time(void);
+#endif
 
 private:
     void timer_vio_callback(void);
