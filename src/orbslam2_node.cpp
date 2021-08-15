@@ -33,7 +33,6 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
     // Initialize publishers.
 #ifdef PX4
     vio_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 10);
-    error_pub_ = this->create_publisher<afg_interfaces::msg::InternalError>("InternalErrors", 10);
 #endif
     state_publisher_ = this->create_publisher<std_msgs::msg::Int32>("orbslam2_state", qos);
 
@@ -133,12 +132,7 @@ void ORBSLAM2Node::setPose(cv::Mat _pose)
         ext_q_j.reset();
         ext_q_k.reset();
 #endif
-#ifdef PX4
-        afg_interfaces::msg::InternalError error_msg{};
-        error_msg.set__err(afg_interfaces::msg::InternalError::SLAM_LOST);
-        error_pub_->publish(error_msg);
-#endif
-        RCLCPP_ERROR(this->get_logger(), "VSLAM tracking lost");
+        RCLCPP_WARN(this->get_logger(), "VSLAM tracking lost");
     }
     else
     {
