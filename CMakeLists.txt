@@ -20,26 +20,6 @@ if(NOT HOST_COMPILATION)
   ADD_DEFINITIONS(-D__ANDROID__)
 endif()
 
-find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(px4_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(realsense2_camera_msgs REQUIRED)
-find_package(realsense2_description REQUIRED)
-find_package(realsense2_camera REQUIRED)
-find_package(eigen3_cmake_module REQUIRED)
-find_package(Eigen3 3.1.0 REQUIRED)
-find_package(Pangolin REQUIRED)
-
-if(NOT HOST_COMPILATION)
-  find_package(CUDA REQUIRED)
-  include_directories("${CUDA_INCLUDE_DIRS}"
-                      /usr/local/include/ORB_SLAM2)
-else()
-  include_directories(/usr/local/include/ORB_SLAM2)
-endif()
-
 # Compilation options to set various features of the nodes.
 # Activate them when building with colcon using:
 # colcon build [...] --ament-cmake-args "-DOPTION=ON/OFF" "[...]" [...]
@@ -50,6 +30,28 @@ option(ELIN "Enable linear-approximation oversampling" OFF)
 option(EQUAD "Enable quadratic-approximation oversampling" OFF)
 option(BENCH "Enable publishing on CameraSampling topic for performance measurements" ON)
 option(DEBUG "Enable debug symbols and related compilation options" OFF)
+
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(realsense2_camera_msgs REQUIRED)
+find_package(realsense2_description REQUIRED)
+find_package(realsense2_camera REQUIRED)
+find_package(eigen3_cmake_module REQUIRED)
+find_package(Eigen3 3.1.0 REQUIRED)
+find_package(Pangolin REQUIRED)
+if(PX4)
+    find_package(px4_msgs REQUIRED)
+endif()
+
+if(NOT HOST_COMPILATION)
+  find_package(CUDA REQUIRED)
+  include_directories("${CUDA_INCLUDE_DIRS}"
+                      /usr/local/include/ORB_SLAM2)
+else()
+  include_directories(/usr/local/include/ORB_SLAM2)
+endif()
 
 # Activate debugging features.
 if(DEBUG)
@@ -74,15 +76,26 @@ add_executable(${PROJECT_NAME} src/orbslam2_ros2.cpp
                                src/orbslam2_node.cpp
                                src/image_grabber_node.cpp)
 
-ament_target_dependencies(${PROJECT_NAME} rclcpp
-                                          std_msgs
-                                          sensor_msgs
-                                          realsense2_camera_msgs
-                                          realsense2_description
-                                          realsense2_camera
-                                          Eigen3
-                                          Pangolin
-                                          px4_msgs)
+if(PX4)
+    ament_target_dependencies(${PROJECT_NAME} rclcpp
+                                              std_msgs
+                                              sensor_msgs
+                                              realsense2_camera_msgs
+                                              realsense2_description
+                                              realsense2_camera
+                                              Eigen3
+                                              Pangolin
+                                              px4_msgs)
+else()
+    ament_target_dependencies(${PROJECT_NAME} rclcpp
+                                              std_msgs
+                                              sensor_msgs
+                                              realsense2_camera_msgs
+                                              realsense2_description
+                                              realsense2_camera
+                                              Eigen3
+                                              Pangolin)
+endif()
 
 target_link_libraries(${PROJECT_NAME} ${LIBS})
 

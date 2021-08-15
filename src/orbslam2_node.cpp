@@ -132,7 +132,7 @@ void ORBSLAM2Node::setPose(cv::Mat _pose)
         ext_q_j.reset();
         ext_q_k.reset();
 #endif
-        RCLCPP_WARN(this->get_logger(), "VSLAM tracking lost");
+        RCLCPP_ERROR(this->get_logger(), "VSLAM tracking lost");
     }
     else
     {
