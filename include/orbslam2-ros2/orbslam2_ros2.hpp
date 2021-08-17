@@ -82,13 +82,10 @@ public:
 
 private:
     void timer_vio_callback(void);
-    void timer_state_callback(void);
 
-    rclcpp::CallbackGroup::SharedPtr state_clbk_group_;
     rclcpp::CallbackGroup::SharedPtr vio_clbk_group_;
 
     rclcpp::TimerBase::SharedPtr vio_timer_;
-    rclcpp::TimerBase::SharedPtr state_timer_;
 
     rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr state_publisher_;
 

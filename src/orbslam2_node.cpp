@@ -28,19 +28,18 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
     sensorType = _sensorType;
 
     // Initialize QoS profile.
-    auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, qos_profile.depth), qos_profile);
+    auto state_qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, qos_profile.depth), qos_profile);
 
     // Initialize publishers.
 #ifdef PX4
     vio_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 10);
 #endif
-    state_publisher_ = this->create_publisher<std_msgs::msg::Int32>("orbslam2_state", qos);
+    state_publisher_ = this->create_publisher<std_msgs::msg::Int32>("ORBS2State", state_qos);
 
     // Create callback groups.
 #ifdef PX4
     timestamp_clbk_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 #endif
-    state_clbk_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     vio_clbk_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
 #ifdef PX4
@@ -54,11 +53,9 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
         timesync_sub_opt);
 #endif
 
-    // Activate timers for state and VIO publishing.
+    // Activate timer for VIO publishing.
     // VIO: 50 ms period.
-    // State: 100 ms period.
     vio_timer_ = this->create_wall_timer(50ms, std::bind(&ORBSLAM2Node::timer_vio_callback, this), vio_clbk_group_);
-    state_timer_ = this->create_wall_timer(100ms, std::bind(&ORBSLAM2Node::timer_state_callback, this), state_clbk_group_);
 
 #ifdef EXTSAMPLER_QUAD
     // Initialize quadratic extrasamplers.
@@ -185,18 +182,6 @@ void ORBSLAM2Node::setState(int32_t _state)
 }
 
 /**
- * @brief Publishes the latest ORB_SLAM2 state value.
- */
-void ORBSLAM2Node::timer_state_callback(void)
-{
-    std_msgs::msg::Int32 msg{};
-    stateMtx.lock();
-    msg.set__data(orbslam2State);
-    stateMtx.unlock();
-    state_publisher_->publish(msg);
-}
-
-/**
  * @brief Publishes the latest VIO data to PX4 topics.
  */
 void ORBSLAM2Node::timer_vio_callback(void)
@@ -276,4 +261,11 @@ void ORBSLAM2Node::timer_vio_callback(void)
     // Send it!
     vio_publisher_->publish(message);
 #endif
+
+    // Publish latest tracking state.
+    std_msgs::msg::Int32 msg{};
+    stateMtx.lock();
+    msg.set__data(orbslam2State);
+    stateMtx.unlock();
+    state_publisher_->publish(msg);
 }
