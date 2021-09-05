@@ -14,25 +14,25 @@
 #include "../include/orbslam2-ros2/orbslam2_ros2.hpp"
 
 #ifdef SMT
-#pragma message "Generating multithreaded VIO process..."
+#pragma message "Generating multithreaded VIO process"
 #else
-#pragma message "Generating single-threaded VIO process..."
+#pragma message "Generating single-threaded VIO process"
 #endif
 
 #ifdef EXTSAMPLER_LIN
-#pragma message "Linear n-samples-filter extrasampler activated."
+#pragma message "Linear n-samples-filter extrasampler activated"
 #endif
 
 #ifdef EXTSAMPLER_QUAD
-#pragma message "Quadratic fixed-sampling-time extrasampler activated."
+#pragma message "Quadratic fixed-sampling-time extrasampler activated"
 #endif
 
 #ifdef PX4
-#pragma message "Activated publishers and subscribers for PX4 topics."
+#pragma message "Activated publishers and subscribers for PX4 topics"
 #endif
 
 #ifdef BENCHMARK
-#pragma message "Activated dummy publisher for VIO processing pipeline performance monitoring."
+#pragma message "Activated dummy publisher for VIO processing pipeline performance monitoring"
 #endif
 
 /**
@@ -125,7 +125,7 @@ int main(int argc, char **argv)
 #else
     rclcpp::executors::SingleThreadedExecutor orbs2_st_executor;
 #endif
-    std::cout << "ROS 2 executor initialized." << std::endl;
+    std::cout << "ROS 2 executor initialized" << std::endl;
 
     // Create ORBSLAM2Node.
     auto orbs2_node_ptr = std::make_shared<ORBSLAM2Node>(&SLAM, sensorType);

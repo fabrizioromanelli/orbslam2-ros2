@@ -22,7 +22,7 @@
 
 /* Preprocessor consistency checks. */
 #if defined(EXTSAMPLER_LIN) && defined(EXTSAMPLER_QUAD)
-#error "Only one extrasampler is allowed."
+#error "Only one extrasampler is allowed"
 #endif
 
 /* Linear extrapolation oversampling algorithm. */
