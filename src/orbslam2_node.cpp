@@ -9,6 +9,10 @@
 
 #include <math.h>
 
+#ifdef TESTING
+#include <cstdio>
+#endif
+
 #include "../include/orbslam2-ros2/orbslam2_ros2.hpp"
 
 using namespace std::chrono_literals;
@@ -233,23 +237,24 @@ void ORBSLAM2Node::timer_vio_callback(void)
     poseMtx.lock();
 #if defined(EXTSAMPLER_LIN) || defined(EXTSAMPLER_QUAD)
     // Get the rest from the extrapolators.
+    // Coordinates are compensated to account for offset from map origin.
     double T = get_time(); // Extrapolator takes new absolute sampling time.
-    message.set__x((float)(ext_x.get_sample(T)));
-    message.set__y((float)(ext_y.get_sample(T)));
-    message.set__z((float)(ext_z.get_sample(T)));
-    message.q[0] = (float)(ext_q_w.get_sample(T));
-    message.q[1] = (float)(ext_q_i.get_sample(T));
-    message.q[2] = (float)(ext_q_j.get_sample(T));
-    message.q[3] = (float)(ext_q_k.get_sample(T));
-    // Quaternions must be normalized first.
-    float q_norm = sqrt(message.q[0] * message.q[0] +
-                        message.q[1] * message.q[1] +
-                        message.q[2] * message.q[2] +
-                        message.q[3] * message.q[3]);
-    message.q[0] /= q_norm;
-    message.q[1] /= q_norm;
-    message.q[2] /= q_norm;
-    message.q[3] /= q_norm;
+    float vslam_coords[3] = {float(ext_x.get_sample(T)),
+                             float(ext_y.get_sample(T)),
+                             float(ext_z.get_sample(T))};
+    message.set__x(r_1_1_ * vslam_coords[0] + r_1_2_ * vslam_coords[1] + x_offset_);
+    message.set__y(r_2_1_ * vslam_coords[0] + r_2_2_ * vslam_coords[1] + y_offset_);
+    message.set__z(vslam_coords[2] + z_offset_);
+
+    // Orientation quaternion from map NED reference frame is computed by
+    // accounting for initial yaw first, and must be normalized.
+    Eigen::Quaternionf q_orb2 = {ext_q_w.get_sample(T),
+                                 ext_q_i.get_sample(T),
+                                 ext_q_j.get_sample(T),
+                                 ext_q_k.get_sample(T)};
+    q_orb2.normalize();
+    Eigen::Quaternionf q_map = q_orb2 * rot_offset_;
+    message.q = {q_map.w(), q_map.x(), q_map.y(), q_map.z()};
 #else
     // Get the rest from the last stored pose.
     cv::Mat Rwc = orbslam2Pose.rowRange(0, 3).colRange(0, 3).t();
@@ -268,16 +273,33 @@ void ORBSLAM2Node::timer_vio_callback(void)
     Eigen::Quaternionf q(orMat);
 
     // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
-    // Quaternions must follow the Hamiltonian convention.
-    message.set__x(Twc.at<float>(2));
-    message.set__y(Twc.at<float>(0));
-    message.set__z(Twc.at<float>(1));
-    message.q = {q.w(), -q.z(), -q.x(), -q.y()};
+    // Coordinates are compensated to account for offset from map origin.
+    float vslam_coords[3] = {Twc.at<float>(2),
+                             Twc.at<float>(0),
+                             Twc.at<float>(1)};
+    message.set__x(r_1_1_ * vslam_coords[0] + r_1_2_ * vslam_coords[1] + x_offset_);
+    message.set__y(r_2_1_ * vslam_coords[0] + r_2_2_ * vslam_coords[1] + y_offset_);
+    message.set__z(vslam_coords[2] + z_offset_);
+
+    // Orientation quaternion from map NED reference frame is computed by
+    // accounting for initial yaw first.
+    // It must follow the Hamiltonian convention.
+    Eigen::Quaternionf q_orb2 = {q.w(), -q.z(), -q.x(), -q.y()};
+    Eigen::Quaternionf q_map = q_orb2 * rot_offset_;
+    message.q = {q_map.w(), q_map.x(), q_map.y(), q_map.z()};
 #endif
     poseMtx.unlock();
 
     // Send it!
     vio_publisher_->publish(message);
+
+#ifdef TESTING
+    printf("x:\t%f, y:\t%f, z:\t%f\n"
+           "q = {\t%f\t%f\t%f\t%f\t}\n\n",
+           message.x, message.y, message.z,
+           message.q[0], message.q[1], message.q[2], message.q[3]);
+#endif
+
 #endif
 
     // Publish latest tracking state.
