@@ -20,6 +20,8 @@
 #include <opencv2/core/core.hpp>
 #include <ORB_SLAM2/System.h>
 
+#include "../../../navigation_data/navigation_data.hpp"
+
 /* Preprocessor consistency checks. */
 #if defined(EXTSAMPLER_LIN) && defined(EXTSAMPLER_QUAD)
 #error "Only one extrasampler is allowed"

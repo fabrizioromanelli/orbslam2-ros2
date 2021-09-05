@@ -30,6 +30,8 @@ option(ELIN "Enable linear-approximation oversampling" OFF)
 option(EQUAD "Enable quadratic-approximation oversampling" OFF)
 option(BENCH "Enable publishing on CameraSampling topic for performance measurements" ON)
 option(DEBUG "Enable debug symbols and related compilation options" OFF)
+option(TESTING "Enable testing features" OFF)
+option(TEST "Compile TEST navigation data" OFF)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -74,7 +76,8 @@ set(LIBS -lfbow
 
 add_executable(${PROJECT_NAME} src/orbslam2_ros2.cpp
                                src/orbslam2_node.cpp
-                               src/image_grabber_node.cpp)
+                               src/image_grabber_node.cpp
+                               ../navigation_data/navigation_data.cpp)
 
 if(PX4)
     ament_target_dependencies(${PROJECT_NAME} rclcpp
@@ -119,6 +122,14 @@ endif()
 if(BENCH)
     message(STATUS "Activating VIO pipeline benchmarking tools")
     target_compile_definitions(${PROJECT_NAME} PUBLIC BENCHMARK)
+endif()
+if(TESTING)
+    message(STATUS "Activating testing features")
+    target_compile_definitions(${PROJECT_NAME} PUBLIC TESTING)
+endif()
+if(TEST)
+    message(STATUS "Compiling TEST navigation data")
+    target_compile_definitions(${PROJECT_NAME} PUBLIC TEST)
 endif()
 
 install(DIRECTORY launch
