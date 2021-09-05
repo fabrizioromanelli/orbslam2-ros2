@@ -7,6 +7,8 @@
  * @date May 26, 2021
  */
 
+#include <math.h>
+
 #include "../include/orbslam2-ros2/orbslam2_ros2.hpp"
 
 using namespace std::chrono_literals;
@@ -27,6 +29,24 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
     // Initialize members.
     mpSLAM = pSLAM;
     sensorType = _sensorType;
+
+    // Compute navigation offsets (for quaternions, ref.: https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation).
+    r_1_1_ = cos(pads_yaw[start_pad_ - 1]);
+    r_1_2_ = -sin(pads_yaw[start_pad_ - 1]);
+    r_2_1_ = sin(pads_yaw[start_pad_ - 1]);
+    r_2_2_ = cos(pads_yaw[start_pad_ - 1]);
+    x_offset_ = pads_pos[start_pad_ - 1][0];
+    y_offset_ = pads_pos[start_pad_ - 1][1];
+    if (start_pad_ == 7)
+        z_offset_ = -LAND_PAD_7_ALT;
+    else if (start_pad_ == 10)
+        z_offset_ = -LAND_PAD_10_ALT;
+    else
+        z_offset_ = 0.0f;
+    rot_offset_.w() = cos(pads_yaw[start_pad_ - 1] / 2.0f);
+    rot_offset_.x() = 0.0f;
+    rot_offset_.y() = 0.0f;
+    rot_offset_.z() = sin(pads_yaw[start_pad_ - 1] / 2.0f);
 
     // Initialize QoS profile.
     auto state_qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, qos_profile.depth), qos_profile);

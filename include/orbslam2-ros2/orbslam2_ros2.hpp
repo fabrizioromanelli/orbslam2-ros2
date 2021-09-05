@@ -102,6 +102,11 @@ private:
 
     int start_pad_;
 
+    float r_1_1_, r_1_2_;
+    float r_2_1_, r_2_2_;
+    float x_offset_, y_offset_, z_offset_;
+    Eigen::Quaternionf rot_offset_;
+
     void timer_vio_callback(void);
 
 #ifdef PX4
