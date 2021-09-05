@@ -21,7 +21,8 @@ rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
  * @param _sensorType Type of sensor in use.
  */
 ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
-                           ORB_SLAM2::System::eSensor _sensorType) : Node(ORB2NAME)
+                           ORB_SLAM2::System::eSensor _sensorType,
+                           int start_pad) : Node(ORB2NAME), start_pad_(start_pad)
 {
     // Initialize members.
     mpSLAM = pSLAM;
@@ -68,7 +69,7 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
     ext_q_k = QuadFixTimeExtrasampler<double>(CAMERA_STIME);
 #endif
 
-    RCLCPP_INFO(this->get_logger(), "Node initialized");
+    RCLCPP_INFO(this->get_logger(), "Node initialized, starting from pad: %d", start_pad_);
 }
 
 /**

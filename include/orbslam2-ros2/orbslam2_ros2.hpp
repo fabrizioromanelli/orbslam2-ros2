@@ -71,7 +71,9 @@ typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image,
 class ORBSLAM2Node : public rclcpp::Node
 {
 public:
-    ORBSLAM2Node(ORB_SLAM2::System *pSLAM, ORB_SLAM2::System::eSensor _sensorType);
+    ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
+                 ORB_SLAM2::System::eSensor _sensorType,
+                 int start_pad);
 
     void setPose(cv::Mat _pose);
     void setState(int32_t _state);
@@ -81,8 +83,6 @@ public:
 #endif
 
 private:
-    void timer_vio_callback(void);
-
     rclcpp::CallbackGroup::SharedPtr vio_clbk_group_;
 
     rclcpp::TimerBase::SharedPtr vio_timer_;
@@ -97,6 +97,10 @@ private:
     int32_t orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
 
     cv::Mat orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
+
+    int start_pad_;
+
+    void timer_vio_callback(void);
 
 #ifdef PX4
     void timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg);

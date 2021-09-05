@@ -92,7 +92,7 @@ int main(int argc, char **argv)
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
-    // Parse input arguments (type of sensor and GUI on/off).
+    // Parse input arguments (type of sensor and GUI on/off, starting pad ID).
     bool irDepth = false;
     ORB_SLAM2::System::eSensor sensorType;
     switch (hashit(argv[3]))
@@ -114,6 +114,7 @@ int main(int argc, char **argv)
         display = true;
     else
         display = false;
+    int start_pad_id = atoi(argv[5]);
 
     // Create ORB_SLAM2 instance.
     ORB_SLAM2::System SLAM(argv[1], argv[2], sensorType, display);
@@ -128,7 +129,9 @@ int main(int argc, char **argv)
     std::cout << "ROS 2 executor initialized" << std::endl;
 
     // Create ORBSLAM2Node.
-    auto orbs2_node_ptr = std::make_shared<ORBSLAM2Node>(&SLAM, sensorType);
+    auto orbs2_node_ptr = std::make_shared<ORBSLAM2Node>(&SLAM,
+                                                         sensorType,
+                                                         start_pad_id);
 
 #ifdef SMT
     // Spawn ImageGrabber executor thread.
