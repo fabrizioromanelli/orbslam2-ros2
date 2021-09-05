@@ -21,12 +21,10 @@ rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
  * @param _sensorType Type of sensor in use.
  */
 ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
-                           ORB_SLAM2::System::eSensor _sensorType) : Node(ORB2NAME)
+                           ORB_SLAM2::System::eSensor _sensorType) : Node(ORB2NAME),
+                                                                     mpSLAM(pSLAM),
+                                                                     sensorType(_sensorType)
 {
-    // Initialize members.
-    mpSLAM = pSLAM;
-    sensorType = _sensorType;
-
     // Initialize QoS profile.
     auto state_qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, qos_profile.depth), qos_profile);
 
