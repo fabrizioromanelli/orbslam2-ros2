@@ -24,12 +24,11 @@ rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
  */
 ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
                            ORB_SLAM2::System::eSensor _sensorType,
-                           int start_pad) : Node(ORB2NAME), start_pad_(start_pad)
+                           int start_pad) : Node(ORB2NAME),
+                                            mpSLAM(pSLAM),
+                                            sensorType(_sensorType),
+                                            start_pad_(start_pad)
 {
-    // Initialize members.
-    mpSLAM = pSLAM;
-    sensorType = _sensorType;
-
     // Compute navigation offsets (for quaternions, ref.: https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation).
     r_1_1_ = cos(pads_yaw[start_pad_ - 1]);
     r_1_2_ = -sin(pads_yaw[start_pad_ - 1]);
@@ -39,8 +38,6 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
     y_offset_ = pads_pos[start_pad_ - 1][1];
     if (start_pad_ == 7)
         z_offset_ = -LAND_PAD_7_ALT;
-    else if (start_pad_ == 10)
-        z_offset_ = -LAND_PAD_10_ALT;
     else
         z_offset_ = 0.0f;
     rot_offset_.w() = cos(pads_yaw[start_pad_ - 1] / 2.0f);
