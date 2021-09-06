@@ -35,6 +35,10 @@
 #pragma message "Activated dummy publisher for VIO processing pipeline performance monitoring"
 #endif
 
+#ifdef TESTING
+#pragma message "Activated testing features"
+#endif
+
 /**
  * @brief ImageGrabber node spinner thread routine.
  *

@@ -7,6 +7,10 @@
  * @date May 26, 2021
  */
 
+#ifdef TESTING
+#include <cstdio>
+#endif
+
 #include "../include/orbslam2-ros2/orbslam2_ros2.hpp"
 
 using namespace std::chrono_literals;
@@ -255,6 +259,19 @@ void ORBSLAM2Node::timer_vio_callback(void)
     message.q = {q.w(), -q.z(), -q.x(), -q.y()};
 #endif
     poseMtx.unlock();
+
+#ifdef TESTING
+    Eigen::Quaternionf q_msg = {message.q[0], message.q[1], message.q[2], message.q[3]};
+    auto euler_ang = q_msg.toRotationMatrix().eulerAngles(0, 1, 2);
+    printf("x:\t%f, y:\t%f, z:\t%f\n"
+           "q = {\t%f\t%f\t%f\t%f\t}\n"
+           "roll:\t%f°, pitch:\t%f°, yaw:\t%f°\n\n",
+           message.x, message.y, message.z,
+           message.q[0], message.q[1], message.q[2], message.q[3],
+           euler_ang[0] * 180.0f / M_PIf32,
+           euler_ang[1] * 180.0f / M_PIf32,
+           euler_ang[2] * 180.0f / M_PIf32);
+#endif
 
     // Send it!
     vio_publisher_->publish(message);

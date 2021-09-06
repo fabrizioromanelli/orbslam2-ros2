@@ -30,6 +30,7 @@ option(ELIN "Enable linear-approximation oversampling" OFF)
 option(EQUAD "Enable quadratic-approximation oversampling" OFF)
 option(BENCH "Enable publishing on CameraSampling topic for performance measurements" ON)
 option(DEBUG "Enable debug symbols and related compilation options" OFF)
+option(TESTING "Enable testing features" OFF)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -119,6 +120,10 @@ endif()
 if(BENCH)
     message(STATUS "Activating VIO pipeline benchmarking tools")
     target_compile_definitions(${PROJECT_NAME} PUBLIC BENCHMARK)
+endif()
+if(TESTING)
+    message(STATUS "Activating testing features and log prints")
+    target_compile_definitions(${PROJECT_NAME} PUBLIC TESTING)
 endif()
 
 install(DIRECTORY launch
