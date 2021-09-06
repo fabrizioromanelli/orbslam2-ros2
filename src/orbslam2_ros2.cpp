@@ -35,8 +35,12 @@
 #pragma message "Activated dummy publisher for VIO processing pipeline performance monitoring"
 #endif
 
-#ifdef TEST
+#ifdef TESTING
 #pragma message "Activated testing features"
+#endif
+
+#ifdef TEST
+#pragma message "Using TEST navigation data"
 #endif
 
 /**
