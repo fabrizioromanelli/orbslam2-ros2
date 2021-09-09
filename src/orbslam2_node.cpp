@@ -296,14 +296,15 @@ void ORBSLAM2Node::timer_vio_callback(void)
 #ifdef TESTING
     Eigen::Quaternionf q_msg = {message.q[0], message.q[1], message.q[2], message.q[3]};
     auto euler_ang = q_msg.toRotationMatrix().eulerAngles(0, 1, 2);
-    printf("x:\t%f, y:\t%f, z:\t%f\n"
-           "q = {\t%f\t%f\t%f\t%f\t}\n"
-           "roll:\t%f°, pitch:\t%f°, yaw:\t%f°\n\n",
-           message.x, message.y, message.z,
-           message.q[0], message.q[1], message.q[2], message.q[3],
-           euler_ang[0] * 180.0f / M_PIf32,
-           euler_ang[1] * 180.0f / M_PIf32,
-           euler_ang[2] * 180.0f / M_PIf32);
+    fprintf(stderr,
+            "x:\t%f, y:\t%f, z:\t%f\n"
+            "q = {\t%f\t%f\t%f\t%f\t}\n"
+            "roll:\t%f°, pitch:\t%f°, yaw:\t%f°\n\n",
+            message.x, message.y, message.z,
+            message.q[0], message.q[1], message.q[2], message.q[3],
+            euler_ang[0] * 180.0f / M_PIf32,
+            euler_ang[1] * 180.0f / M_PIf32,
+            euler_ang[2] * 180.0f / M_PIf32);
 #endif
 
 #endif
