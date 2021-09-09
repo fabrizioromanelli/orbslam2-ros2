@@ -270,9 +270,9 @@ void ORBSLAM2Node::timer_vio_callback(void)
 
     // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
     // Quaternions must follow the Hamiltonian convention.
-    message.set__x(cos(atan(0.5f)) * Twc.at<float>(2) + sin(atan(0.5f)) * Twc.at<float>(1));
+    message.set__x(cos(atan(0.5f)) * Twc.at<float>(2) - sin(atan(0.5f)) * Twc.at<float>(1));
     message.set__y(Twc.at<float>(0));
-    message.set__z(-sin(atan(0.5f)) * Twc.at<float>(2) + cos(atan(0.5f)) * Twc.at<float>(1));
+    message.set__z(sin(atan(0.5f)) * Twc.at<float>(2) + cos(atan(0.5f)) * Twc.at<float>(1));
     message.q = {q.w(), q.x(), q.y(), q.z()};
 #endif
     poseMtx.unlock();
