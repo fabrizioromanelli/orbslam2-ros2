@@ -249,14 +249,31 @@ void ORBSLAM2Node::timer_vio_callback(void)
     orMat(2, 0) = orbslam2Pose.at<float>(2, 0);
     orMat(2, 1) = orbslam2Pose.at<float>(2, 1);
     orMat(2, 2) = orbslam2Pose.at<float>(2, 2);
-    Eigen::Quaternionf q(orMat);
+    Eigen::Quaternionf q_orb(orMat);
+
+    // Correct orientation.
+    Eigen::Quaternionf q_orb_ned = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
+    auto orb_ned_angles = q_orb_ned.toRotationMatrix().eulerAngles(0, 1, 2);
+    Eigen::Quaternionf q_roll = {cos(orb_ned_angles[0] / 2.0f),
+                                 sin(orb_ned_angles[0] / 2.0f) * cos(atan(0.5f)),
+                                 0.0f,
+                                 sin(orb_ned_angles[0] / 2.0f) * sin(atan(0.5f))};
+    Eigen::Quaternionf q_pitch = {cos(orb_ned_angles[1] / 2.0f),
+                                  0.0f,
+                                  sin(orb_ned_angles[1] / 2.0f),
+                                  0.0f};
+    Eigen::Quaternionf q_yaw = {cos(orb_ned_angles[2] / 2.0f),
+                                sin(orb_ned_angles[2] / 2.0f) * -sin(atan(0.5f)),
+                                0.0f,
+                                sin(orb_ned_angles[2] / 2.0f) * cos(atan(0.5f))};
+    Eigen::Quaternionf q = q_yaw * q_pitch * q_roll;
 
     // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
     // Quaternions must follow the Hamiltonian convention.
-    message.set__x(Twc.at<float>(2));
+    message.set__x(cos(atan(0.5f)) * Twc.at<float>(2) + sin(atan(0.5f)) * Twc.at<float>(1));
     message.set__y(Twc.at<float>(0));
-    message.set__z(Twc.at<float>(1));
-    message.q = {q.w(), -q.z(), -q.x(), -q.y()};
+    message.set__z(-sin(atan(0.5f)) * Twc.at<float>(2) + cos(atan(0.5f)) * Twc.at<float>(1));
+    message.q = {q.w(), q.x(), q.y(), q.z()};
 #endif
     poseMtx.unlock();
 
