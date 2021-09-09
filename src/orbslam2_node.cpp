@@ -270,22 +270,39 @@ void ORBSLAM2Node::timer_vio_callback(void)
     orMat(2, 0) = orbslam2Pose.at<float>(2, 0);
     orMat(2, 1) = orbslam2Pose.at<float>(2, 1);
     orMat(2, 2) = orbslam2Pose.at<float>(2, 2);
-    Eigen::Quaternionf q(orMat);
+    Eigen::Quaternionf q_orb(orMat);
+
+    // Correct orientation.
+    Eigen::Quaternionf q_orb_ned = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
+    auto orb_ned_angles = q_orb_ned.toRotationMatrix().eulerAngles(0, 1, 2);
+    Eigen::Quaternionf q_roll = {cos(orb_ned_angles[0] / 2.0f),
+                                 sin(orb_ned_angles[0] / 2.0f) * cos(atan(0.5f)),
+                                 0.0f,
+                                 sin(orb_ned_angles[0] / 2.0f) * sin(atan(0.5f))};
+    Eigen::Quaternionf q_pitch = {cos(orb_ned_angles[1] / 2.0f),
+                                  0.0f,
+                                  sin(orb_ned_angles[1] / 2.0f),
+                                  0.0f};
+    Eigen::Quaternionf q_yaw = {cos(orb_ned_angles[2] / 2.0f),
+                                sin(orb_ned_angles[2] / 2.0f) * -sin(atan(0.5f)),
+                                0.0f,
+                                sin(orb_ned_angles[2] / 2.0f) * cos(atan(0.5f))};
+    Eigen::Quaternionf q = q_yaw * q_pitch * q_roll;
 
     // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
-    // Coordinates are compensated to account for offset from map origin.
-    float vslam_coords[3] = {Twc.at<float>(2),
-                             Twc.at<float>(0),
-                             Twc.at<float>(1)};
-    message.set__x(r_1_1_ * vslam_coords[0] + r_1_2_ * vslam_coords[1] + x_offset_);
-    message.set__y(r_2_1_ * vslam_coords[0] + r_2_2_ * vslam_coords[1] + y_offset_);
-    message.set__z(vslam_coords[2] + z_offset_);
+    // Coordinates are compensated to account for offset from map origin and
+    // tilted camera.
+    float orb_x = cos(atan(0.5f)) * Twc.at<float>(2) - sin(atan(0.5f)) * Twc.at<float>(1);
+    float orb_y = Twc.at<float>(0);
+    float orb_z = sin(atan(0.5f)) * Twc.at<float>(2) + cos(atan(0.5f)) * Twc.at<float>(1);
+    message.set__x(r_1_1_ * orb_x + r_1_2_ * orb_y + x_offset_);
+    message.set__y(r_2_1_ * orb_x + r_2_2_ * orb_y + y_offset_);
+    message.set__z(orb_z + z_offset_);
 
     // Orientation quaternion from map NED reference frame is computed by
     // accounting for initial yaw first.
     // It must follow the Hamiltonian convention.
-    Eigen::Quaternionf q_orb2 = {q.w(), -q.z(), -q.x(), -q.y()};
-    Eigen::Quaternionf q_map = q_orb2 * rot_offset_;
+    Eigen::Quaternionf q_map = q * rot_offset_;
     message.q = {q_map.w(), q_map.x(), q_map.y(), q_map.z()};
 #endif
     poseMtx.unlock();
