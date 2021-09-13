@@ -25,9 +25,11 @@ rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
  * @param _sensorType Type of sensor in use.
  */
 ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
-                           ORB_SLAM2::System::eSensor _sensorType) : Node(ORB2NAME),
-                                                                     mpSLAM(pSLAM),
-                                                                     sensorType(_sensorType)
+                           ORB_SLAM2::System::eSensor _sensorType,
+                           float camera_pitch) : Node(ORB2NAME),
+                                                 mpSLAM(pSLAM),
+                                                 sensorType(_sensorType),
+                                                 camera_pitch_(camera_pitch)
 {
     // Initialize QoS profile.
     auto state_qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, qos_profile.depth), qos_profile);
@@ -70,7 +72,11 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
     ext_q_k = QuadFixTimeExtrasampler<double>(CAMERA_STIME);
 #endif
 
-    RCLCPP_INFO(this->get_logger(), "Node initialized");
+    // Compute camera values.
+    cp_sin_ = sin(camera_pitch_);
+    cp_cos_ = cos(camera_pitch_);
+
+    RCLCPP_INFO(this->get_logger(), "Node initialized, camera pitch: %f", camera_pitch_ * 180.0f / M_PIf32);
 }
 
 /**
@@ -153,19 +159,51 @@ void ORBSLAM2Node::setPose(cv::Mat _pose)
         orMat(2, 0) = _pose.at<float>(2, 0);
         orMat(2, 1) = _pose.at<float>(2, 1);
         orMat(2, 2) = _pose.at<float>(2, 2);
-        Eigen::Quaternionf q(orMat);
+        Eigen::Quaternionf q_orb(orMat);
+
+        double new_T = get_time();
 
         // Update extrapolators with latest sample data.
-        double new_T = get_time();
         // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
         // Quaternions must follow the Hamiltonian convention.
-        ext_x.update_samples(new_T, Twc.at<float>(2));
-        ext_y.update_samples(new_T, Twc.at<float>(0));
-        ext_z.update_samples(new_T, Twc.at<float>(1));
-        ext_q_w.update_samples(new_T, q.w());
-        ext_q_i.update_samples(new_T, -q.z());
-        ext_q_j.update_samples(new_T, -q.x());
-        ext_q_k.update_samples(new_T, -q.y());
+        if (camera_pitch_ != 0.0f)
+        {
+            // Correct orientation: rotate around camera axes in NED body frame.
+            Eigen::Quaternionf q_orb_ned = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
+            auto orb_ned_angles = q_orb_ned.toRotationMatrix().eulerAngles(0, 1, 2);
+            Eigen::Quaternionf q_roll = {cos(orb_ned_angles[0] / 2.0f),
+                                         sin(orb_ned_angles[0] / 2.0f) * cp_cos_,
+                                         0.0f,
+                                         sin(orb_ned_angles[0] / 2.0f) * cp_sin_};
+            Eigen::Quaternionf q_pitch = {cos(orb_ned_angles[1] / 2.0f),
+                                          0.0f,
+                                          sin(orb_ned_angles[1] / 2.0f),
+                                          0.0f};
+            Eigen::Quaternionf q_yaw = {cos(orb_ned_angles[2] / 2.0f),
+                                        sin(orb_ned_angles[2] / 2.0f) * -cp_sin_,
+                                        0.0f,
+                                        sin(orb_ned_angles[2] / 2.0f) * cp_cos_};
+            Eigen::Quaternionf q = q_yaw * (q_pitch * q_roll);
+            ext_q_w.update_samples(new_T, q.w());
+            ext_q_i.update_samples(new_T, q.x());
+            ext_q_j.update_samples(new_T, q.y());
+            ext_q_k.update_samples(new_T, q.z());
+
+            // Correct position: rotate -camera_pitch around Y axis.
+            ext_x.update_samples(new_T, cp_cos_ * Twc.at<float>(2) - cp_sin_ * Twc.at<float>(1));
+            ext_y.update_samples(new_T, Twc.at<float>(0));
+            ext_z.update_samples(new_T, cp_sin_ * Twc.at<float>(2) + cp_cos_ * Twc.at<float>(1));
+        }
+        else
+        {
+            ext_x.update_samples(new_T, Twc.at<float>(2));
+            ext_y.update_samples(new_T, Twc.at<float>(0));
+            ext_z.update_samples(new_T, Twc.at<float>(1));
+            ext_q_w.update_samples(new_T, q_orb.w());
+            ext_q_i.update_samples(new_T, -q_orb.z());
+            ext_q_j.update_samples(new_T, -q_orb.x());
+            ext_q_k.update_samples(new_T, -q_orb.y());
+        }
 #endif
     }
     poseMtx.unlock();
@@ -197,7 +235,6 @@ void ORBSLAM2Node::timer_vio_callback(void)
     message.set__timestamp_sample(msg_timestamp);
 
     // Set local frames of reference (these SHOULD be NED for PX4).
-    // Note that velocity is not sent.
     message.set__local_frame(px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_NED);
     message.set__velocity_frame(px4_msgs::msg::VehicleVisualOdometry::LOCAL_FRAME_NED);
 
@@ -251,44 +288,54 @@ void ORBSLAM2Node::timer_vio_callback(void)
     orMat(2, 2) = orbslam2Pose.at<float>(2, 2);
     Eigen::Quaternionf q_orb(orMat);
 
-    // Correct orientation.
-    Eigen::Quaternionf q_orb_ned = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
-    auto orb_ned_angles = q_orb_ned.toRotationMatrix().eulerAngles(0, 1, 2);
-    Eigen::Quaternionf q_roll = {cos(orb_ned_angles[0] / 2.0f),
-                                 sin(orb_ned_angles[0] / 2.0f) * cos(atan(0.5f)),
-                                 0.0f,
-                                 sin(orb_ned_angles[0] / 2.0f) * sin(atan(0.5f))};
-    Eigen::Quaternionf q_pitch = {cos(orb_ned_angles[1] / 2.0f),
-                                  0.0f,
-                                  sin(orb_ned_angles[1] / 2.0f),
-                                  0.0f};
-    Eigen::Quaternionf q_yaw = {cos(orb_ned_angles[2] / 2.0f),
-                                sin(orb_ned_angles[2] / 2.0f) * -sin(atan(0.5f)),
-                                0.0f,
-                                sin(orb_ned_angles[2] / 2.0f) * cos(atan(0.5f))};
-    Eigen::Quaternionf q = q_yaw * q_pitch * q_roll;
-
     // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
     // Quaternions must follow the Hamiltonian convention.
-    message.set__x(cos(atan(0.5f)) * Twc.at<float>(2) - sin(atan(0.5f)) * Twc.at<float>(1));
-    message.set__y(Twc.at<float>(0));
-    message.set__z(sin(atan(0.5f)) * Twc.at<float>(2) + cos(atan(0.5f)) * Twc.at<float>(1));
-    message.q = {q.w(), q.x(), q.y(), q.z()};
+    if (camera_pitch_ != 0.0f)
+    {
+        // Correct orientation: rotate around camera axes in NED body frame.
+        Eigen::Quaternionf q_orb_ned = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
+        auto orb_ned_angles = q_orb_ned.toRotationMatrix().eulerAngles(0, 1, 2);
+        Eigen::Quaternionf q_roll = {cos(orb_ned_angles[0] / 2.0f),
+                                     sin(orb_ned_angles[0] / 2.0f) * cp_cos_,
+                                     0.0f,
+                                     sin(orb_ned_angles[0] / 2.0f) * cp_sin_};
+        Eigen::Quaternionf q_pitch = {cos(orb_ned_angles[1] / 2.0f),
+                                      0.0f,
+                                      sin(orb_ned_angles[1] / 2.0f),
+                                      0.0f};
+        Eigen::Quaternionf q_yaw = {cos(orb_ned_angles[2] / 2.0f),
+                                    sin(orb_ned_angles[2] / 2.0f) * -cp_sin_,
+                                    0.0f,
+                                    sin(orb_ned_angles[2] / 2.0f) * cp_cos_};
+        Eigen::Quaternionf q = q_yaw * (q_pitch * q_roll);
+        message.q = {q.w(), q.x(), q.y(), q.z()};
+
+        // Correct position: rotate -camera_pitch around Y axis.
+        message.set__x(cp_cos_ * Twc.at<float>(2) - cp_sin_ * Twc.at<float>(1));
+        message.set__y(Twc.at<float>(0));
+        message.set__z(cp_sin_ * Twc.at<float>(2) + cp_cos_ * Twc.at<float>(1));
+    }
+    else
+    {
+        message.set__x(Twc.at<float>(2));
+        message.set__y(Twc.at<float>(0));
+        message.set__z(Twc.at<float>(1));
+        message.q = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
+    }
 #endif
     poseMtx.unlock();
 
 #ifdef TESTING
     Eigen::Quaternionf q_msg = {message.q[0], message.q[1], message.q[2], message.q[3]};
     auto euler_ang = q_msg.toRotationMatrix().eulerAngles(0, 1, 2);
-    fprintf(stderr,
-            "x:\t%f, y:\t%f, z:\t%f\n"
-            "q = {\t%f\t%f\t%f\t%f\t}\n"
-            "roll:\t%f°, pitch:\t%f°, yaw:\t%f°\n\n",
-            message.x, message.y, message.z,
-            message.q[0], message.q[1], message.q[2], message.q[3],
-            euler_ang[0] * 180.0f / M_PIf32,
-            euler_ang[1] * 180.0f / M_PIf32,
-            euler_ang[2] * 180.0f / M_PIf32);
+    printf("x:\t%f, y:\t%f, z:\t%f\n"
+           "q = {\t%f\t%f\t%f\t%f\t}\n"
+           "roll:\t%f°, pitch:\t%f°, yaw:\t%f°\n\n",
+           message.x, message.y, message.z,
+           message.q[0], message.q[1], message.q[2], message.q[3],
+           euler_ang[0] * 180.0f / M_PIf32,
+           euler_ang[1] * 180.0f / M_PIf32,
+           euler_ang[2] * 180.0f / M_PIf32);
 #endif
 
     // Send it!
