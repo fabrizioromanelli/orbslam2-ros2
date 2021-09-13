@@ -96,7 +96,12 @@ int main(int argc, char **argv)
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
-    // Parse input arguments (type of sensor and GUI on/off).
+    // Parse input arguments (type of sensor, GUI on/off and camera pitch).
+    if (argc != 6)
+    {
+        std::cerr << "Usage:\n\torbslam2 VOCABULARY_FILE CAMERA_CONFIG_FILE SENSOR_TYPE DISPLAY CAMERA_PITCH" << std::endl;
+        exit(EXIT_FAILURE);
+    }
     bool irDepth = false;
     ORB_SLAM2::System::eSensor sensorType;
     switch (hashit(argv[3]))
@@ -118,6 +123,7 @@ int main(int argc, char **argv)
         display = true;
     else
         display = false;
+    float camera_pitch = atof(argv[5]);
 
     // Create ORB_SLAM2 instance.
     ORB_SLAM2::System SLAM(argv[1], argv[2], sensorType, display);
@@ -132,7 +138,9 @@ int main(int argc, char **argv)
     std::cout << "ROS 2 executor initialized" << std::endl;
 
     // Create ORBSLAM2Node.
-    auto orbs2_node_ptr = std::make_shared<ORBSLAM2Node>(&SLAM, sensorType);
+    auto orbs2_node_ptr = std::make_shared<ORBSLAM2Node>(&SLAM,
+                                                         sensorType,
+                                                         camera_pitch);
 
 #ifdef SMT
     // Spawn ImageGrabber executor thread.
