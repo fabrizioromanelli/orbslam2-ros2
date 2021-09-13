@@ -97,11 +97,6 @@ int main(int argc, char **argv)
     setvbuf(stderr, NULL, _IONBF, 0);
 
     // Parse input arguments (type of sensor, GUI on/off and camera pitch).
-    if (argc != 6)
-    {
-        std::cerr << "Usage:\n\torbslam2 VOCABULARY_FILE CAMERA_CONFIG_FILE SENSOR_TYPE DISPLAY CAMERA_PITCH" << std::endl;
-        exit(EXIT_FAILURE);
-    }
     bool irDepth = false;
     ORB_SLAM2::System::eSensor sensorType;
     switch (hashit(argv[3]))
