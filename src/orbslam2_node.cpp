@@ -354,7 +354,8 @@ void ORBSLAM2Node::timer_vio_callback(void)
         Eigen::Quaternionf q_map = q_orb_ned * rot_offset_;
         message.q = {q_map.w(), q_map.x(), q_map.y(), q_map.z()};
     }
-#endif poseMtx.unlock();
+#endif
+    poseMtx.unlock();
 
     // Send it!
     vio_publisher_->publish(message);
