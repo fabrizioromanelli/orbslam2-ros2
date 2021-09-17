@@ -24,8 +24,8 @@ endif()
 # Activate them when building with colcon using:
 # colcon build [...] --ament-cmake-args "-DOPTION=ON/OFF" "[...]" [...]
 # Quote each option separately!!!
-option(PX4 "Enable publishers of VIO data for PX4" OFF)
-option(SMT "Enable multithreaded processing" ON)
+option(PX4 "Enable publishers of VIO data for PX4" ON)
+option(SMT "Enable multithreaded processing" OFF)
 option(ELIN "Enable linear-approximation oversampling" OFF)
 option(EQUAD "Enable quadratic-approximation oversampling" OFF)
 option(BENCH "Enable publishing on CameraSampling topic for performance measurements" ON)
