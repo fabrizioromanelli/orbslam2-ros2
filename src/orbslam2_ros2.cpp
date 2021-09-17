@@ -101,7 +101,7 @@ int main(int argc, char **argv)
     setvbuf(stderr, NULL, _IONBF, 0);
 
     // Parse input arguments (type of sensor, GUI on/off and camera pitch).
-    if (argc != 7)
+    if (argc < 7)
     {
         std::cerr << "Usage:\n\torbslam2 VOCABULARY_FILE CAMERA_CONFIG_FILE SENSOR_TYPE DISPLAY CAMERA_PITCH START_PAD" << std::endl;
         exit(EXIT_FAILURE);
