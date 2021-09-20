@@ -56,7 +56,7 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
 
     // Initialize publishers.
 #ifdef PX4
-    vio_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 10);
+    vio_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 1);
 #endif
     state_publisher_ = this->create_publisher<std_msgs::msg::Int32>("ORBS2State", state_qos);
 
@@ -72,7 +72,7 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
     timesync_sub_opt.callback_group = timestamp_clbk_group_;
     ts_sub_ = this->create_subscription<px4_msgs::msg::Timesync>(
         "Timesync_PubSubTopic",
-        10,
+        1,
         std::bind(&ORBSLAM2Node::timestamp_callback, this, std::placeholders::_1),
         timesync_sub_opt);
 #endif
