@@ -10,6 +10,20 @@
 #include "../include/orbslam2-ros2/orbslam2_ros2.hpp"
 
 /**
+ * @brief RealSense QoS settings.
+ */
+static const rmw_qos_profile_t rmw_qos_profile_rs = {
+    RMW_QOS_POLICY_HISTORY_KEEP_LAST,
+    1,
+    RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
+    RMW_QOS_POLICY_DURABILITY_VOLATILE,
+    RMW_QOS_DEADLINE_DEFAULT,
+    RMW_QOS_LIFESPAN_DEFAULT,
+    RMW_QOS_POLICY_LIVELINESS_SYSTEM_DEFAULT,
+    RMW_QOS_LIVELINESS_LEASE_DURATION_DEFAULT,
+    false};
+
+/**
  * @brief Creates an ImageGrabber node.
  *
  * @param pSLAM ORB_SLAM2 instance pointer.
@@ -46,8 +60,8 @@ ImageGrabber::ImageGrabber(ORB_SLAM2::System *pSLAM,
         s1 = "/vslam/infra1/image_rect_raw";
         s2 = "/vslam/infra2/image_rect_raw";
     }
-    stream1_sub_.subscribe(this, s1, rmw_qos_profile_sensor_data);
-    stream2_sub_.subscribe(this, s2, rmw_qos_profile_sensor_data);
+    stream1_sub_.subscribe(this, s1, rmw_qos_profile_rs);
+    stream2_sub_.subscribe(this, s2, rmw_qos_profile_rs);
 
     // Create and configure streams synchronizer.
     sync_ = std::make_shared<message_filters::Synchronizer<sync_pol>>(sync_pol(10), stream1_sub_, stream2_sub_);
@@ -58,7 +72,7 @@ ImageGrabber::ImageGrabber(ORB_SLAM2::System *pSLAM,
 
 #ifdef BENCHMARK
     // Create camera sampling publisher.
-    sampling_publisher_ = this->create_publisher<std_msgs::msg::Bool>("CameraSampling", 10);
+    sampling_publisher_ = this->create_publisher<std_msgs::msg::Bool>("CameraSampling", 1);
 #endif
 
     RCLCPP_INFO(this->get_logger(), "Node initialized");
