@@ -45,12 +45,12 @@ double ORBSLAM2Node::orb_filter(double sample, int axis)
         no_trusting += abs(orb_buffer_[axis][N_ORB_BUFFER - 1 - j] - orb_buffer_[axis][N_ORB_BUFFER - 2 - j]);
 
     // Compute trust coefficients
-    double tau_dynamic = tau_dynamic_min_;
+    tau_dynamic_[axis] = max(tau_dynamic_min_, tau_dynamic_[axis] - 1.0/120.0);
     if (no_trusting > tau_dynamic_thresh_[axis])
-        tau_dynamic = tau_dynamic_slow_;
+        tau_dynamic_[axis] = tau_dynamic_slow_;
 
     // Extract trusted sample
-    double y_timevariant = tau_dynamic * y_timevariant_old_[axis] + (1.0 - tau_dynamic) + y_filtered;
+    double y_timevariant = tau_dynamic_[axis] * y_timevariant_old_[axis] + (1.0 - tau_dynamic_[axis]) + y_filtered;
 
     // Store latest values and samples
     y_timevariant_old_[axis] = y_timevariant;
