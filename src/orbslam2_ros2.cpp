@@ -58,9 +58,9 @@ int main(int argc, char **argv)
     setvbuf(stderr, NULL, _IONBF, 0);
 
     // Parse input arguments (type of sensor, GUI on/off and camera pitch).
-    if (argc < 7)
+    if (argc < 8)
     {
-        std::cerr << "Usage:\n\torbslam2 VOCABULARY_FILE CAMERA_CONFIG_FILE SENSOR_TYPE DISPLAY CAMERA_PITCH START_PAD" << std::endl;
+        std::cerr << "Usage:\n\torbslam2 VOCABULARY_FILE CAMERA_CONFIG_FILE SENSOR_TYPE DISPLAY CAMERA_PITCH START_PAD FILTER" << std::endl;
         exit(EXIT_FAILURE);
     }
     bool irDepth = false;
@@ -86,6 +86,10 @@ int main(int argc, char **argv)
         display = false;
     double camera_pitch = atof(argv[5]);
     int start_pad_id = atoi(argv[6]);
+    bool filter = false;
+    std::string filter_flag(argv[7]);
+    if (filter_flag == "ON")
+        filter = true;
 
     // Create ORB_SLAM2 instance.
     ORB_SLAM2::System SLAM(argv[1], argv[2], sensorType, display);
@@ -99,7 +103,8 @@ int main(int argc, char **argv)
     auto orbs2_node_ptr = std::make_shared<ORBSLAM2Node>(&SLAM,
                                                          sensorType,
                                                          camera_pitch,
-                                                         start_pad_id);
+                                                         start_pad_id,
+                                                         filter);
 
     // Create ImageGrabber node.
     auto image_grabber_node_ptr = std::make_shared<ImageGrabber>(&SLAM,

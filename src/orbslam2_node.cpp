@@ -29,11 +29,13 @@ rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
 ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
                            ORB_SLAM2::System::eSensor _sensorType,
                            double camera_pitch,
-                           int start_pad) : Node(ORB2NAME),
-                                            mpSLAM(pSLAM),
-                                            sensorType(_sensorType),
-                                            camera_pitch_(camera_pitch),
-                                            start_pad_(start_pad)
+                           int start_pad,
+                           bool filter) : Node(ORB2NAME),
+                                          mpSLAM(pSLAM),
+                                          sensorType(_sensorType),
+                                          camera_pitch_(camera_pitch),
+                                          start_pad_(start_pad),
+                                          filter_(filter)
 {
     // Compute navigation offsets.
     x_offset_ = pads_pos[start_pad_ - 1][0];
@@ -71,9 +73,13 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
     cp_sin_ = sin(camera_pitch_);
     cp_cos_ = cos(camera_pitch_);
 
-    RCLCPP_INFO(this->get_logger(), "Node initialized, camera pitch: %f, start pad: %d",
-                camera_pitch_ * 180.0 / M_PI,
-                start_pad_);
+    std::cout << "Camera pitch: " << (camera_pitch_ * 180.0 / M_PI) << "°, start pad: " << start_pad_ << std::endl;
+    if (filter_)
+        std::cout << "XYZ filtering ENABLED" << std::endl;
+    else
+        std::cout << "XYZ filtering DISABLED" << std::endl;
+
+    RCLCPP_INFO(this->get_logger(), "Node initialized");
 }
 
 /**

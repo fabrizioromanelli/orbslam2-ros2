@@ -23,6 +23,12 @@ def generate_launch_description():
                  "8",
                  "9"]
     )
+    filter_launch_arg = DeclareLaunchArgument(
+        "filter",
+        description='Flag to activate filtering over XYZ data',
+        choices=["ON",
+                 "OFF"]
+    )
 
     # Node to start
     orbslam2_node = Node(
@@ -36,12 +42,14 @@ def generate_launch_description():
                 "IRD",
                 "OFF",
                 LaunchConfiguration("camera_pitch"),
-                LaunchConfiguration("start_pad")
+                LaunchConfiguration("start_pad"),
+                LaunchConfiguration("filter")
         ]
     )
 
     return LaunchDescription([
         camera_pitch_launch_arg,
         start_pad_launch_arg,
+        filter_launch_arg,
         orbslam2_node
     ])

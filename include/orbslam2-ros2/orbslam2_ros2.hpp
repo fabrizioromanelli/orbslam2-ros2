@@ -53,7 +53,8 @@ public:
     ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
                  ORB_SLAM2::System::eSensor _sensorType,
                  double camera_pitch,
-                 int start_pad);
+                 int start_pad,
+                 bool filter);
 
     void setPose(cv::Mat _pose);
     void setState(int32_t _state);
@@ -80,6 +81,8 @@ private:
     int start_pad_;
 
     float x_offset_, y_offset_, z_offset_;
+
+    bool filter_;
 
     void timer_vio_callback(void);
 
