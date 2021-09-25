@@ -27,10 +27,10 @@ rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
  * @param axis Axis index: [x y z] = [0 1 2].
  * @return Filtered sample along specified axis.
  */
-double ORBSLAM2Node::orb_filter(double sample, int axis)
+float ORBSLAM2Node::orb_filter(float sample, int axis)
 {
     // Compute new filtered sample
-    double y_filtered = (-a_1_ * y_filtered_old_[axis] - a_0_ * y_filtered_old_old_[axis] + b_1_ * orb_data_old_[axis] + b_0_ * orb_data_old_old_[axis]);
+    float y_filtered = (-a_1_ * y_filtered_old_[axis] - a_0_ * y_filtered_old_old_[axis] + b_1_ * orb_data_old_[axis] + b_0_ * orb_data_old_old_[axis]);
 
     // Shift samples left one position
     for (int j = 0; j < N_ORB_BUFFER - 1; j++)
@@ -40,17 +40,17 @@ double ORBSLAM2Node::orb_filter(double sample, int axis)
     orb_buffer_[axis][N_ORB_BUFFER - 1] = sample;
 
     // Update trusting threshold
-    double no_trusting = 0.0;
+    float no_trusting = 0.0;
     for (int j = 0; j < (N_ORB_BUFFER - 1); j++)
         no_trusting += abs(orb_buffer_[axis][N_ORB_BUFFER - 1 - j] - orb_buffer_[axis][N_ORB_BUFFER - 2 - j]);
 
     // Compute trust coefficients
-    tau_dynamic_[axis] = max(tau_dynamic_min_, tau_dynamic_[axis] - 1.0/120.0);
+    tau_dynamic_[axis] = max(tau_dynamic_min_, tau_dynamic_[axis] - 1.0f / 120.0f);
     if (no_trusting > tau_dynamic_thresh_[axis])
         tau_dynamic_[axis] = tau_dynamic_slow_;
 
     // Extract trusted sample
-    double y_timevariant = tau_dynamic_[axis] * y_timevariant_old_[axis] + (1.0 - tau_dynamic_[axis]) + y_filtered;
+    float y_timevariant = tau_dynamic_[axis] * y_timevariant_old_[axis] + (1.0f - tau_dynamic_[axis]) + y_filtered;
 
     // Store latest values and samples
     y_timevariant_old_[axis] = y_timevariant;
@@ -70,7 +70,7 @@ double ORBSLAM2Node::orb_filter(double sample, int axis)
  */
 ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
                            ORB_SLAM2::System::eSensor _sensorType,
-                           double camera_pitch,
+                           float camera_pitch,
                            int start_pad,
                            bool filter) : Node(ORB2NAME),
                                           mpSLAM(pSLAM),
@@ -115,13 +115,13 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
     cp_sin_ = sin(camera_pitch_);
     cp_cos_ = cos(camera_pitch_);
 
-    std::cout << "Camera pitch: " << (camera_pitch_ * 180.0 / M_PI) << "°, start pad: " << start_pad_ << std::endl;
+    std::cout << "Camera pitch: " << (camera_pitch_ * 180.0f / M_PIf32) << "°, start pad: " << start_pad_ << std::endl;
     if (filter_)
     {
         for (int i = 0; i < 3; i++)
         {
             for (int j = 0; j < N_ORB_BUFFER; j++)
-                orb_buffer_[i][j] = 0.0;
+                orb_buffer_[i][j] = 0.0f;
         }
         std::cout << "XYZ filtering ENABLED" << std::endl;
     }
@@ -152,7 +152,7 @@ void ORBSLAM2Node::setPose(cv::Mat _pose)
     if (_pose.empty())
     {
         // SLAM lost tracking.
-        orbslam2Pose = cv::Mat::eye(4, 4, CV_64F);
+        orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
         RCLCPP_ERROR(this->get_logger(), "VSLAM tracking lost");
     }
     else
@@ -209,60 +209,57 @@ void ORBSLAM2Node::timer_vio_callback(void)
     cv::Mat Rwc = orbslam2Pose.rowRange(0, 3).colRange(0, 3).t();
     cv::Mat Twc = -Rwc * orbslam2Pose.rowRange(0, 3).col(3);
 
-    Eigen::Matrix3d orMat;
-    orMat(0, 0) = orbslam2Pose.at<double>(0, 0);
-    orMat(0, 1) = orbslam2Pose.at<double>(0, 1);
-    orMat(0, 2) = orbslam2Pose.at<double>(0, 2);
-    orMat(1, 0) = orbslam2Pose.at<double>(1, 0);
-    orMat(1, 1) = orbslam2Pose.at<double>(1, 1);
-    orMat(1, 2) = orbslam2Pose.at<double>(1, 2);
-    orMat(2, 0) = orbslam2Pose.at<double>(2, 0);
-    orMat(2, 1) = orbslam2Pose.at<double>(2, 1);
-    orMat(2, 2) = orbslam2Pose.at<double>(2, 2);
-    Eigen::Quaterniond q_orb(orMat);
+    Eigen::Matrix3f orMat;
+    orMat(0, 0) = orbslam2Pose.at<float>(0, 0);
+    orMat(0, 1) = orbslam2Pose.at<float>(0, 1);
+    orMat(0, 2) = orbslam2Pose.at<float>(0, 2);
+    orMat(1, 0) = orbslam2Pose.at<float>(1, 0);
+    orMat(1, 1) = orbslam2Pose.at<float>(1, 1);
+    orMat(1, 2) = orbslam2Pose.at<float>(1, 2);
+    orMat(2, 0) = orbslam2Pose.at<float>(2, 0);
+    orMat(2, 1) = orbslam2Pose.at<float>(2, 1);
+    orMat(2, 2) = orbslam2Pose.at<float>(2, 2);
+    Eigen::Quaternionf q_orb(orMat);
 
     // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
     // Quaternions must follow the Hamiltonian convention.
-    if (camera_pitch_ != 0.0)
+    if (camera_pitch_ != 0.0f)
     {
         // Correct orientation: rotate around camera axes in NED body frame,
         // and add start pad yaw.
-        Eigen::Quaterniond q_orb_ned = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
+        Eigen::Quaternionf q_orb_ned = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
         auto orb_ned_angles = q_orb_ned.toRotationMatrix().eulerAngles(0, 1, 2);
-        Eigen::Quaterniond q_roll = {cos(orb_ned_angles[0] / 2.0),
-                                     sin(orb_ned_angles[0] / 2.0) * cp_cos_,
-                                     0.0,
-                                     sin(orb_ned_angles[0] / 2.0) * cp_sin_};
-        Eigen::Quaterniond q_pitch = {cos(orb_ned_angles[1] / 2.0),
-                                      0.0,
-                                      sin(orb_ned_angles[1] / 2.0),
-                                      0.0};
-        Eigen::Quaterniond q_yaw = {cos(orb_ned_angles[2] / 2.0),
-                                    sin(orb_ned_angles[2] / 2.0) * -cp_sin_,
-                                    0.0,
-                                    sin(orb_ned_angles[2] / 2.0) * cp_cos_};
-        Eigen::Quaterniond q_map = q_yaw * (q_pitch * q_roll);
-        message.q = {float(q_map.w()),
-                     float(q_map.x()),
-                     float(q_map.y()),
-                     float(q_map.z())};
+        Eigen::Quaternionf q_roll = {cos(orb_ned_angles[0] / 2.0f),
+                                     sin(orb_ned_angles[0] / 2.0f) * cp_cos_,
+                                     0.0f,
+                                     sin(orb_ned_angles[0] / 2.0f) * cp_sin_};
+        Eigen::Quaternionf q_pitch = {cos(orb_ned_angles[1] / 2.0f),
+                                      0.0f,
+                                      sin(orb_ned_angles[1] / 2.0f),
+                                      0.0f};
+        Eigen::Quaternionf q_yaw = {cos(orb_ned_angles[2] / 2.0f),
+                                    sin(orb_ned_angles[2] / 2.0f) * -cp_sin_,
+                                    0.0f,
+                                    sin(orb_ned_angles[2] / 2.0f) * cp_cos_};
+        Eigen::Quaternionf q_map = q_yaw * (q_pitch * q_roll);
+        message.q = {q_map.w(), q_map.x(), q_map.y(), q_map.z()};
 
         // Correct position: rotate -camera_pitch around Y axis, then add start
         // pad offsets.
-        double orb_x = cp_cos_ * Twc.at<double>(2) - cp_sin_ * Twc.at<double>(1);
-        double orb_y = Twc.at<double>(0);
-        double orb_z = cp_sin_ * Twc.at<double>(2) + cp_cos_ * Twc.at<double>(1);
+        float orb_x = cp_cos_ * Twc.at<float>(2) - cp_sin_ * Twc.at<float>(1);
+        float orb_y = Twc.at<float>(0);
+        float orb_z = cp_sin_ * Twc.at<float>(2) + cp_cos_ * Twc.at<float>(1);
         if (filter_)
         {
-            message.set__x(float(orb_filter(orb_x + x_offset_, 0)));
-            message.set__y(float(orb_filter(orb_y + y_offset_, 1)));
-            message.set__z(float(orb_filter(orb_z + z_offset_, 2)));
+            message.set__x(orb_filter(orb_x + x_offset_, 0));
+            message.set__y(orb_filter(orb_y + y_offset_, 1));
+            message.set__z(orb_filter(orb_z + z_offset_, 2));
         }
         else
         {
-            message.set__x(float(orb_x + x_offset_));
-            message.set__y(float(orb_y + y_offset_));
-            message.set__z(float(orb_z + z_offset_));
+            message.set__x(orb_x + x_offset_);
+            message.set__y(orb_y + y_offset_);
+            message.set__z(orb_z + z_offset_);
         }
     }
     else
@@ -270,22 +267,22 @@ void ORBSLAM2Node::timer_vio_callback(void)
         // Only account for map offsets on position and orientation.
         if (filter_)
         {
-            message.set__x(float(orb_filter(Twc.at<double>(2) + x_offset_, 0)));
-            message.set__y(float(orb_filter(Twc.at<double>(0) + y_offset_, 1)));
-            message.set__z(float(orb_filter(Twc.at<double>(1) + z_offset_, 2)));
+            message.set__x(orb_filter(Twc.at<float>(2) + x_offset_, 0));
+            message.set__y(orb_filter(Twc.at<float>(0) + y_offset_, 1));
+            message.set__z(orb_filter(Twc.at<float>(1) + z_offset_, 2));
         }
         else
         {
-            message.set__x(float(Twc.at<double>(2) + x_offset_));
-            message.set__y(float(Twc.at<double>(0) + y_offset_));
-            message.set__z(float(Twc.at<double>(1) + z_offset_));
+            message.set__x(Twc.at<float>(2) + x_offset_);
+            message.set__y(Twc.at<float>(0) + y_offset_);
+            message.set__z(Twc.at<float>(1) + z_offset_);
         }
 
-        Eigen::Quaterniond q_map = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
-        message.q = {float(q_map.w()),
-                     float(q_map.x()),
-                     float(q_map.y()),
-                     float(q_map.z())};
+        Eigen::Quaternionf q_map = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
+        message.q = {q_map.w(),
+                     q_map.x(),
+                     q_map.y(),
+                     q_map.z()};
     }
     poseMtx.unlock();
 

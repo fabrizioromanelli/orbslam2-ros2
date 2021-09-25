@@ -84,7 +84,7 @@ int main(int argc, char **argv)
         display = true;
     else
         display = false;
-    double camera_pitch = atof(argv[5]);
+    float camera_pitch = atof(argv[5]);
     int start_pad_id = atoi(argv[6]);
     bool filter = false;
     std::string filter_flag(argv[7]);

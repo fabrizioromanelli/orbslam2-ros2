@@ -55,7 +55,7 @@ class ORBSLAM2Node : public rclcpp::Node
 public:
     ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
                  ORB_SLAM2::System::eSensor _sensorType,
-                 double camera_pitch,
+                 float camera_pitch,
                  int start_pad,
                  bool filter);
 
@@ -76,10 +76,10 @@ private:
     ORB_SLAM2::System::eSensor sensorType;
     int32_t orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
 
-    cv::Mat orbslam2Pose = cv::Mat::eye(4, 4, CV_64F);
+    cv::Mat orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
 
-    double camera_pitch_;
-    double cp_sin_, cp_cos_;
+    float camera_pitch_;
+    float cp_sin_, cp_cos_;
 
     int start_pad_;
 
@@ -87,28 +87,28 @@ private:
 
     bool filter_;
 
-    const double a_0_ = 0.239018;
-    const double a_1_ = -0.7379;
-    const double b_0_ = 0.19080;
-    const double b_1_ = 0.31028;
-    const double tau_dynamic_thresh_[3] = {0.5, 0.7, 0.2};
-    const double tau_thresh_min_[3] = {0.1, 0.1, 0.08};
-    const double tau_dynamic_min_ = 0.1;
-    const double tau_dynamic_slow_ = 0.98;
+    const float a_0_ = 0.239018f;
+    const float a_1_ = -0.7379f;
+    const float b_0_ = 0.19080f;
+    const float b_1_ = 0.31028f;
+    const float tau_dynamic_thresh_[3] = {0.5f, 0.7f, 0.2f};
+    const float tau_thresh_min_[3] = {0.1f, 0.1f, 0.08f};
+    const float tau_dynamic_min_ = 0.1f;
+    const float tau_dynamic_slow_ = 0.98f;
 
-    double y_filtered_old_[3] = {0.0, 0.0, 0.0};
-    double y_filtered_old_old_[3] = {0.0, 0.0, 0.0};
-    double orb_data_old_[3] = {0.0, 0.0, 0.0};
-    double orb_data_old_old_[3] = {0.0, 0.0, 0.0};
-    double y_timevariant_old_[3] = {0.0, 0.0, 0.0};
-    double tau_dynamic_[3] = {0.0, 0.0, 0.0};
-    double orb_buffer_[3][N_ORB_BUFFER];
+    float y_filtered_old_[3] = {0.0f, 0.0f, 0.0f};
+    float y_filtered_old_old_[3] = {0.0f, 0.0f, 0.0f};
+    float orb_data_old_[3] = {0.0f, 0.0f, 0.0f};
+    float orb_data_old_old_[3] = {0.0f, 0.0f, 0.0f};
+    float y_timevariant_old_[3] = {0.0f, 0.0f, 0.0f};
+    float tau_dynamic_[3] = {0.0f, 0.0f, 0.0f};
+    float orb_buffer_[3][N_ORB_BUFFER];
 
     void timer_vio_callback(void);
 
     void timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg);
 
-    double orb_filter(double sample, int axis);
+    float orb_filter(float sample, int axis);
 
     std::atomic<uint64_t> timestamp_;
     rclcpp::CallbackGroup::SharedPtr timestamp_clbk_group_;
