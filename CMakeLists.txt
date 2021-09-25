@@ -40,8 +40,8 @@ find_package(Pangolin REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(CUDA REQUIRED)
 
- include_directories("${CUDA_INCLUDE_DIRS}"
-                     /usr/local/include/ORB_SLAM2)
+include_directories("${CUDA_INCLUDE_DIRS}"
+                    /usr/local/include/ORB_SLAM2)
 
 # Activate debugging features.
 if(DEBUG)
