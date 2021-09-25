@@ -21,6 +21,48 @@ using namespace std::chrono_literals;
 rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
 
 /**
+ * @brief Implementation of a filter for VIO data.
+ *
+ * @param sample New sample to add.
+ * @param axis Axis index: [x y z] = [0 1 2].
+ * @return Filtered sample along specified axis.
+ */
+double ORBSLAM2Node::orb_filter(double sample, int axis)
+{
+    // Compute new filtered sample
+    double y_filtered = (-a_1_ * y_filtered_old_[axis] - a_0_ * y_filtered_old_old_[axis] + b_1_ * orb_data_old_[axis] + b_0_ * orb_data_old_old_[axis]);
+
+    // Shift samples left one position
+    for (int j = 0; j < N_ORB_BUFFER - 1; j++)
+        orb_buffer_[axis][j] = orb_buffer_[axis][j + 1];
+
+    // Store new sample
+    orb_buffer_[axis][N_ORB_BUFFER - 1] = sample;
+
+    // Update trusting threshold
+    double no_trusting = 0.0;
+    for (int j = 0; j < (N_ORB_BUFFER - 1); j++)
+        no_trusting += abs(orb_buffer_[axis][N_ORB_BUFFER - 1 - j] - orb_buffer_[axis][N_ORB_BUFFER - 2 - j]);
+
+    // Compute trust coefficients
+    double tau_dynamic = tau_dynamic_min_;
+    if (no_trusting > tau_dynamic_thresh_[axis])
+        tau_dynamic = tau_dynamic_slow_;
+
+    // Extract trusted sample
+    double y_timevariant = tau_dynamic * y_timevariant_old_[axis] + (1.0 - tau_dynamic) + y_filtered;
+
+    // Store latest values and samples
+    y_timevariant_old_[axis] = y_timevariant;
+    orb_data_old_old_[axis] = orb_data_old_[axis];
+    orb_data_old_[axis] = sample;
+    y_filtered_old_old_[axis] = y_filtered_old_[axis];
+    y_filtered_old_[axis] = y_filtered;
+
+    return y_timevariant;
+}
+
+/**
  * @brief Creates an ORBSLAM2Node.
  * 
  * @param pSLAM ORB_SLAM2 instance pointer.
@@ -75,7 +117,14 @@ ORBSLAM2Node::ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
 
     std::cout << "Camera pitch: " << (camera_pitch_ * 180.0 / M_PI) << "°, start pad: " << start_pad_ << std::endl;
     if (filter_)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = 0; j < N_ORB_BUFFER; j++)
+                orb_buffer_[i][j] = 0.0;
+        }
         std::cout << "XYZ filtering ENABLED" << std::endl;
+    }
     else
         std::cout << "XYZ filtering DISABLED" << std::endl;
 
@@ -203,16 +252,34 @@ void ORBSLAM2Node::timer_vio_callback(void)
         double orb_x = cp_cos_ * Twc.at<double>(2) - cp_sin_ * Twc.at<double>(1);
         double orb_y = Twc.at<double>(0);
         double orb_z = cp_sin_ * Twc.at<double>(2) + cp_cos_ * Twc.at<double>(1);
-        message.set__x(float(orb_x + x_offset_));
-        message.set__y(float(orb_y + y_offset_));
-        message.set__z(float(orb_z + z_offset_));
+        if (filter_)
+        {
+            message.set__x(float(orb_filter(orb_x + x_offset_, 0)));
+            message.set__y(float(orb_filter(orb_y + y_offset_, 1)));
+            message.set__z(float(orb_filter(orb_z + z_offset_, 2)));
+        }
+        else
+        {
+            message.set__x(float(orb_x + x_offset_));
+            message.set__y(float(orb_y + y_offset_));
+            message.set__z(float(orb_z + z_offset_));
+        }
     }
     else
     {
         // Only account for map offsets on position and orientation.
-        message.set__x(float(Twc.at<double>(2) + x_offset_));
-        message.set__y(float(Twc.at<double>(0) + y_offset_));
-        message.set__z(float(Twc.at<double>(1) + z_offset_));
+        if (filter_)
+        {
+            message.set__x(float(orb_filter(Twc.at<double>(2) + x_offset_, 0)));
+            message.set__y(float(orb_filter(Twc.at<double>(0) + y_offset_, 1)));
+            message.set__z(float(orb_filter(Twc.at<double>(1) + z_offset_, 2)));
+        }
+        else
+        {
+            message.set__x(float(Twc.at<double>(2) + x_offset_));
+            message.set__y(float(Twc.at<double>(0) + y_offset_));
+            message.set__z(float(Twc.at<double>(1) + z_offset_));
+        }
 
         Eigen::Quaterniond q_map = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
         message.q = {float(q_map.w()),

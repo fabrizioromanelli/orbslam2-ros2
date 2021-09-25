@@ -44,6 +44,9 @@
 #include <message_filters/sync_policies/approximate_time.h>
 typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image> sync_pol;
 
+/* ORB_SLAM2 data filter buffer size. */
+#define N_ORB_BUFFER 6
+
 /**
  * @brief ORB_SLAM2 node: publishes pose estimates on ROS 2/PX4 topics.
  */
@@ -84,9 +87,27 @@ private:
 
     bool filter_;
 
+    const double a_0_ = 0.239018;
+    const double a_1_ = -0.7379;
+    const double b_0_ = 0.19080;
+    const double b_1_ = 0.31028;
+    const double tau_dynamic_thresh_[3] = {0.5, 0.5, 0.28};
+    const double tau_thresh_min_[3] = {0.07, 0.07, 0.05};
+    const double tau_dynamic_min_ = 0.2;
+    const double tau_dynamic_slow_ = 0.98;
+
+    double y_filtered_old_[3] = {0.0, 0.0, 0.0};
+    double y_filtered_old_old_[3] = {0.0, 0.0, 0.0};
+    double orb_data_old_[3] = {0.0, 0.0, 0.0};
+    double orb_data_old_old_[3] = {0.0, 0.0, 0.0};
+    double y_timevariant_old_[3] = {0.0, 0.0, 0.0};
+    double orb_buffer_[3][N_ORB_BUFFER];
+
     void timer_vio_callback(void);
 
     void timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg);
+
+    double orb_filter(double sample, int axis);
 
     std::atomic<uint64_t> timestamp_;
     rclcpp::CallbackGroup::SharedPtr timestamp_clbk_group_;
