@@ -50,7 +50,7 @@ float ORBSLAM2Node::orb_filter(float sample, int axis)
         tau_dynamic_[axis] = tau_dynamic_slow_;
 
     // Extract trusted sample
-    float y_timevariant = tau_dynamic_[axis] * y_timevariant_old_[axis] + (1.0f - tau_dynamic_[axis]) + y_filtered;
+    float y_timevariant = tau_dynamic_[axis] * y_timevariant_old_[axis] + (1.0f - tau_dynamic_[axis]) * y_filtered;
 
     // Store latest values and samples
     y_timevariant_old_[axis] = y_timevariant;
