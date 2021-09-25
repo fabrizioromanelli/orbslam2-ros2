@@ -16,18 +16,12 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic -Wno-implicit-fallthrough -Wno-maybe-uninitialized)
 endif()
 
-if(NOT HOST_COMPILATION)
-  ADD_DEFINITIONS(-D__ANDROID__)
-endif()
+add_definitions(-D__ANDROID__)
 
 # Compilation options to set various features of the nodes.
 # Activate them when building with colcon using:
 # colcon build [...] --ament-cmake-args "-DOPTION=ON/OFF" "[...]" [...]
 # Quote each option separately!!!
-option(PX4 "Enable publishers of VIO data for PX4" ON)
-option(SMT "Enable multithreaded processing" OFF)
-option(ELIN "Enable linear-approximation oversampling" OFF)
-option(EQUAD "Enable quadratic-approximation oversampling" OFF)
 option(BENCH "Enable publishing on CameraSampling topic for performance measurements" ON)
 option(DEBUG "Enable debug symbols and related compilation options" OFF)
 option(TESTING "Enable testing features" OFF)
@@ -43,17 +37,11 @@ find_package(realsense2_camera REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
-if(PX4)
-    find_package(px4_msgs REQUIRED)
-endif()
+find_package(px4_msgs REQUIRED)
+find_package(CUDA REQUIRED)
 
-if(NOT HOST_COMPILATION)
-  find_package(CUDA REQUIRED)
-  include_directories("${CUDA_INCLUDE_DIRS}"
-                      /usr/local/include/ORB_SLAM2)
-else()
-  include_directories(/usr/local/include/ORB_SLAM2)
-endif()
+ include_directories("${CUDA_INCLUDE_DIRS}"
+                     /usr/local/include/ORB_SLAM2)
 
 # Activate debugging features.
 if(DEBUG)
@@ -79,46 +67,19 @@ add_executable(${PROJECT_NAME} src/orbslam2_ros2.cpp
                                src/image_grabber_node.cpp
                                ../navigation_data/navigation_data.cpp)
 
-if(PX4)
-    ament_target_dependencies(${PROJECT_NAME} rclcpp
-                                              std_msgs
-                                              sensor_msgs
-                                              realsense2_camera_msgs
-                                              realsense2_description
-                                              realsense2_camera
-                                              Eigen3
-                                              Pangolin
-                                              px4_msgs)
-else()
-    ament_target_dependencies(${PROJECT_NAME} rclcpp
-                                              std_msgs
-                                              sensor_msgs
-                                              realsense2_camera_msgs
-                                              realsense2_description
-                                              realsense2_camera
-                                              Eigen3
-                                              Pangolin)
-endif()
+ament_target_dependencies(${PROJECT_NAME} rclcpp
+                                          std_msgs
+                                          sensor_msgs
+                                          realsense2_camera_msgs
+                                          realsense2_description
+                                          realsense2_camera
+                                          Eigen3
+                                          Pangolin
+                                          px4_msgs)
 
 target_link_libraries(${PROJECT_NAME} ${LIBS})
 
 # Activate features in the code from the options described above.
-if(PX4)
-    message(STATUS "Activating PX4 integrations")
-    target_compile_definitions(${PROJECT_NAME} PUBLIC PX4)
-endif()
-if(SMT)
-    message(STATUS "Selecting parallel implementation")
-    target_compile_definitions(${PROJECT_NAME} PUBLIC SMT)
-endif()
-if(ELIN)
-    message(STATUS "Including linear extrasampler")
-    target_compile_definitions(${PROJECT_NAME} PUBLIC EXTSAMPLER_LIN)
-endif()
-if(EQUAD)
-    message(STATUS "Including quadratic extrasampler")
-    target_compile_definitions(${PROJECT_NAME} PUBLIC EXTSAMPLER_QUAD)
-endif()
 if(BENCH)
     message(STATUS "Activating VIO pipeline benchmarking tools")
     target_compile_definitions(${PROJECT_NAME} PUBLIC BENCHMARK)

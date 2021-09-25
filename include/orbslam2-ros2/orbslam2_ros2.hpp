@@ -22,36 +22,13 @@
 
 #include "../../../navigation_data/navigation_data.hpp"
 
-/* Preprocessor consistency checks. */
-#if defined(EXTSAMPLER_LIN) && defined(EXTSAMPLER_QUAD)
-#error "Only one extrasampler is allowed"
-#endif
-
-/* Linear extrapolation oversampling algorithm. */
-#ifdef EXTSAMPLER_LIN
-#include "../extrasampler/extrasampler_linear.hpp"
-#ifndef SAMPLES
-#define SAMPLES 8
-#endif
-#endif
-
-/* Quadratic extrapolation oversampling algorithm. */
-#ifdef EXTSAMPLER_QUAD
-#include "../extrasampler/extrasampler_quadratic_fixed-time.hpp"
-#ifndef CAMERA_STIME
-#define CAMERA_STIME 0.067 // Camera sampling + processing time (accounts for ORB_SLAM2 computations too).
-#endif
-#endif
-
 /* Node names. */
 #define ORB2NAME "orbslam2_node"
 #define IMGRABNAME "image_grabber"
 
 /* PX4 messages. */
-#ifdef PX4
 #include <px4_msgs/msg/timesync.hpp>
 #include <px4_msgs/msg/vehicle_visual_odometry.hpp>
-#endif
 
 /* State messages. */
 #include <std_msgs/msg/int32.hpp>
@@ -81,10 +58,6 @@ public:
     void setPose(cv::Mat _pose);
     void setState(int32_t _state);
 
-#if defined(EXTSAMPLER_LIN) || defined(EXTSAMPLER_QUAD)
-    double get_time(void);
-#endif
-
 private:
     rclcpp::CallbackGroup::SharedPtr vio_clbk_group_;
 
@@ -106,40 +79,16 @@ private:
 
     int start_pad_;
 
-    float r_1_1_, r_1_2_;
-    float r_2_1_, r_2_2_;
     float x_offset_, y_offset_, z_offset_;
-    Eigen::Quaternionf rot_offset_;
 
     void timer_vio_callback(void);
 
-#ifdef PX4
     void timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg);
+
     std::atomic<uint64_t> timestamp_;
     rclcpp::CallbackGroup::SharedPtr timestamp_clbk_group_;
     rclcpp::Publisher<px4_msgs::msg::VehicleVisualOdometry>::SharedPtr vio_publisher_;
     rclcpp::Subscription<px4_msgs::msg::Timesync>::SharedPtr ts_sub_;
-#endif
-
-#ifdef EXTSAMPLER_QUAD
-    QuadFixTimeExtrasampler<double> ext_x;
-    QuadFixTimeExtrasampler<double> ext_y;
-    QuadFixTimeExtrasampler<double> ext_z;
-    QuadFixTimeExtrasampler<double> ext_q_w;
-    QuadFixTimeExtrasampler<double> ext_q_i;
-    QuadFixTimeExtrasampler<double> ext_q_j;
-    QuadFixTimeExtrasampler<double> ext_q_k;
-#endif
-
-#ifdef EXTSAMPLER_LIN
-    LinearExtrasampler<double, SAMPLES> ext_x;
-    LinearExtrasampler<double, SAMPLES> ext_y;
-    LinearExtrasampler<double, SAMPLES> ext_z;
-    LinearExtrasampler<double, SAMPLES> ext_q_w;
-    LinearExtrasampler<double, SAMPLES> ext_q_i;
-    LinearExtrasampler<double, SAMPLES> ext_q_j;
-    LinearExtrasampler<double, SAMPLES> ext_q_k;
-#endif
 };
 
 /**
