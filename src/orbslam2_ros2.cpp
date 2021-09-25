@@ -84,7 +84,7 @@ int main(int argc, char **argv)
         display = true;
     else
         display = false;
-    float camera_pitch = atof(argv[5]);
+    double camera_pitch = atof(argv[5]);
     int start_pad_id = atoi(argv[6]);
 
     // Create ORB_SLAM2 instance.

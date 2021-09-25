@@ -52,7 +52,7 @@ class ORBSLAM2Node : public rclcpp::Node
 public:
     ORBSLAM2Node(ORB_SLAM2::System *pSLAM,
                  ORB_SLAM2::System::eSensor _sensorType,
-                 float camera_pitch,
+                 double camera_pitch,
                  int start_pad);
 
     void setPose(cv::Mat _pose);
@@ -72,10 +72,10 @@ private:
     ORB_SLAM2::System::eSensor sensorType;
     int32_t orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
 
-    cv::Mat orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
+    cv::Mat orbslam2Pose = cv::Mat::eye(4, 4, CV_64F);
 
-    float camera_pitch_;
-    float cp_sin_, cp_cos_;
+    double camera_pitch_;
+    double cp_sin_, cp_cos_;
 
     int start_pad_;
 
