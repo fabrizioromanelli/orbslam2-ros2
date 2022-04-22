@@ -83,9 +83,9 @@ set(LIBS -lfbow
          -lboost_system)
 
 # Adding RealSense driver library
-# add_library(${REALSENSE} SHARED Drivers/RealSense/realsense.cc)
+add_library(${REALSENSE} realsenseDriver Drivers/RealSense/realsense.cc)
 # Adding sensor fusion library
-add_library(${FUSER} SHARED src/fuser.cc src/pose.cc)
+add_library(${FUSER} fuser src/fuser.cc src/pose.cc)
 
 add_executable(${PROJECT_NAME} src/orbslam2_ros2.cpp
                                src/orbslam2_node.cpp)
@@ -105,7 +105,7 @@ else()
                                               Pangolin)
 endif()
 
-target_link_libraries(${PROJECT_NAME} ${LIBS} ${REALSENSE} ${FUSER} ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME} ${LIBS} ${REALSENSE} ${OpenCV_LIBS} ${realsense2_LIBRARY} ${FUSER})
 
 # Activate features in the code from the options described above.
 if(PX4)
