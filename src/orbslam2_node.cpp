@@ -242,7 +242,7 @@ void ORBSLAM2Node::setState(int32_t _state)
     orbslam2State = _state;
     stateMtx.unlock();
 }
-
+#define PX4
 /**
  * @brief Publishes the latest VIO data to PX4 topics.
  */
