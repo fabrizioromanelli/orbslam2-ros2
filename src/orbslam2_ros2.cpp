@@ -39,31 +39,6 @@
 #pragma message "Activated testing features"
 #endif
 
-/**
- * @brief ImageGrabber node spinner thread routine.
- *
- * @param pSLAM ORB_SLAM2 instance pointer.
- * @param pORBSLAM2Node Sibling ORBSLAM2Node pointer.
- * @param sensorType Type of sensor in use.
- * @param irDepth IR depth measurement availability flag.
- */
-#ifdef SMT
-void image_grabber_spinner(ORB_SLAM2::System *pSLAM,
-                           std::shared_ptr<ORBSLAM2Node> pORBSLAM2Node,
-                           ORB_SLAM2::System::eSensor sensorType,
-                           bool irDepth)
-{
-    // Create ImageGrabber node.
-    auto image_grabber_node_ptr = std::make_shared<ImageGrabber>(pSLAM,
-                                                                 pORBSLAM2Node,
-                                                                 sensorType,
-                                                                 irDepth);
-
-    // Spin on the ImageGrabber node.
-    rclcpp::spin(image_grabber_node_ptr);
-}
-#endif
-
 /* Helps with input argument parsing. */
 enum string_code
 {
@@ -138,24 +113,9 @@ int main(int argc, char **argv)
                                                          camera_pitch);
 
 #ifdef SMT
-    // Spawn ImageGrabber executor thread.
-    std::thread image_grabber(image_grabber_spinner,
-                              &SLAM,
-                              orbs2_node_ptr,
-                              sensorType,
-                              irDepth);
-    // Now this thread will become one of the ORBSLAM2Node's ones.
     orbs2_mt_executor.add_node(orbs2_node_ptr);
     orbs2_mt_executor.spin();
-    image_grabber.join();
 #else
-    // Create ImageGrabber node.
-    auto image_grabber_node_ptr = std::make_shared<ImageGrabber>(&SLAM,
-                                                                 orbs2_node_ptr,
-                                                                 sensorType,
-                                                                 irDepth);
-    // Execute both nodes on this very thread.
-    orbs2_st_executor.add_node(image_grabber_node_ptr);
     orbs2_st_executor.add_node(orbs2_node_ptr);
     orbs2_st_executor.spin();
 #endif

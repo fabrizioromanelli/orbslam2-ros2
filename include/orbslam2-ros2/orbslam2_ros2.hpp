@@ -132,33 +132,4 @@ private:
 #endif
 };
 
-/**
- * @brief Gets frames from the camera and calls ORB_SLAM2.
- */
-class ImageGrabber : public rclcpp::Node
-{
-public:
-    ImageGrabber(ORB_SLAM2::System *pSLAM,
-                 std::shared_ptr<ORBSLAM2Node> pORBSLAM2Node,
-                 ORB_SLAM2::System::eSensor sensorType,
-                 bool irDepth);
-
-    void GrabRGBD(const sensor_msgs::msg::Image::SharedPtr &msgRGB,
-                  const sensor_msgs::msg::Image::SharedPtr &msgD);
-    void GrabStereo(const sensor_msgs::msg::Image::SharedPtr &msgLeft,
-                    const sensor_msgs::msg::Image::SharedPtr &msgRight);
-
-    ORB_SLAM2::System *mpSLAM;
-    std::shared_ptr<ORBSLAM2Node> mpORBSLAM2Node;
-
-private:
-    message_filters::Subscriber<sensor_msgs::msg::Image> stream1_sub_;
-    message_filters::Subscriber<sensor_msgs::msg::Image> stream2_sub_;
-    std::shared_ptr<message_filters::Synchronizer<sync_pol>> sync_;
-
-#ifdef BENCHMARK
-    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr sampling_publisher_;
-#endif
-};
-
 #endif
