@@ -12,21 +12,19 @@ def generate_launch_description():
     )
 
     # Node to start
-    orbslam2_node = Node(
-        package="orbslam2",
-        executable="orbslam2",
+    fuser_node = Node(
+        package="fuser",
+        executable="fuser",
         output='both',
         emulate_tty=True,
         arguments=[
                 "/usr/local/share/ORB_SLAM2/Vocabulary/orb_mur.fbow",
                 "/usr/local/share/ORB_SLAM2/Config/RealSense-D435i-IRD.yaml",
-                "IRD",
-                "OFF",
                 LaunchConfiguration("camera_pitch")
         ]
     )
 
     return LaunchDescription([
         camera_pitch_launch_arg,
-        orbslam2_node
+        fuser_node
     ])

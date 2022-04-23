@@ -5,7 +5,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Default build type: Release" FORCE)
 endif()
 
-project(orbslam2)
+project(fuser)
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
@@ -26,11 +26,7 @@ endif()
 # Quote each option separately!!!
 option(PX4 "Enable publishers of VIO data for PX4" OFF)
 option(SMT "Enable multithreaded processing" ON)
-option(ELIN "Enable linear-approximation oversampling" OFF)
-option(EQUAD "Enable quadratic-approximation oversampling" OFF)
-option(BENCH "Enable publishing on CameraSampling topic for performance measurements" ON)
 option(DEBUG "Enable debug symbols and related compilation options" OFF)
-option(TESTING "Enable testing features" OFF)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -40,7 +36,7 @@ find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
 if(PX4)
-    find_package(px4_msgs REQUIRED)
+  find_package(px4_msgs REQUIRED)
 endif()
 
 find_package(OpenCV 4.5.1 QUIET)
@@ -65,15 +61,15 @@ endif()
 
 # Activate debugging features.
 if(DEBUG)
-    message(STATUS "Activating debugging features")
-    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Debug build" FORCE)
+  message(STATUS "Activating debugging features")
+  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Debug build" FORCE)
 endif()
 
 # Check build type.
 if(CMAKE_BUILD_TYPE MATCHES Release)
-    message(STATUS "Release build type selected")
+  message(STATUS "Release build type selected")
 elseif(CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
-    message(STATUS "Debug build type selected")
+  message(STATUS "Debug build type selected")
 endif()
 
 set(LIBS -lfbow
@@ -82,61 +78,43 @@ set(LIBS -lfbow
          -lORB_SLAM2
          -lboost_system)
 
-# Adding RealSense driver library
-add_library(${REALSENSE} realsenseDriver Drivers/RealSense/realsense.cc)
-# Adding sensor fusion library
-add_library(${FUSER} fuser src/fuser.cc src/pose.cc)
-
-add_executable(${PROJECT_NAME} src/orbslam2_ros2.cpp
-                               src/orbslam2_node.cpp)
+add_executable(${PROJECT_NAME} src/fuser.cc src/pose.cc Drivers/RealSense/realsense.cc
+                               src/fuser_ros2.cpp
+                               src/fuser_node.cpp)
 
 if(PX4)
-    ament_target_dependencies(${PROJECT_NAME} rclcpp
-                                              std_msgs
-                                              sensor_msgs
-                                              Eigen3
-                                              Pangolin
-                                              px4_msgs)
+  ament_target_dependencies(${PROJECT_NAME} rclcpp
+                                            std_msgs
+                                            sensor_msgs
+                                            Eigen3
+                                            Pangolin
+                                            px4_msgs
+                                            OpenCV
+                                            realsense2)
 else()
-    ament_target_dependencies(${PROJECT_NAME} rclcpp
-                                              std_msgs
-                                              sensor_msgs
-                                              Eigen3
-                                              Pangolin)
+  ament_target_dependencies(${PROJECT_NAME} rclcpp
+                                            std_msgs
+                                            sensor_msgs
+                                            Eigen3
+                                            Pangolin
+                                            OpenCV
+                                            realsense2)
 endif()
 
-target_link_libraries(${PROJECT_NAME} ${LIBS} ${REALSENSE} ${OpenCV_LIBS} ${realsense2_LIBRARY} ${FUSER})
+target_link_libraries(${PROJECT_NAME} ${LIBS} ${realsense2_LIBRARY} ${OpenCV_LIBS})
 
 # Activate features in the code from the options described above.
 if(PX4)
-    message(STATUS "Activating PX4 integrations")
-    target_compile_definitions(${PROJECT_NAME} PUBLIC PX4)
+  message(STATUS "Activating PX4 integrations")
+  target_compile_definitions(${PROJECT_NAME} PUBLIC PX4)
 endif()
 if(SMT)
-    message(STATUS "Selecting parallel implementation")
-    target_compile_definitions(${PROJECT_NAME} PUBLIC SMT)
-endif()
-if(ELIN)
-    message(STATUS "Including linear extrasampler")
-    target_compile_definitions(${PROJECT_NAME} PUBLIC EXTSAMPLER_LIN)
-endif()
-if(EQUAD)
-    message(STATUS "Including quadratic extrasampler")
-    target_compile_definitions(${PROJECT_NAME} PUBLIC EXTSAMPLER_QUAD)
-endif()
-if(BENCH)
-    message(STATUS "Activating VIO pipeline benchmarking tools")
-    target_compile_definitions(${PROJECT_NAME} PUBLIC BENCHMARK)
-endif()
-if(TESTING)
-    message(STATUS "Activating testing features and log prints")
-    target_compile_definitions(${PROJECT_NAME} PUBLIC TESTING)
+  message(STATUS "Selecting parallel implementation")
+  target_compile_definitions(${PROJECT_NAME} PUBLIC SMT)
 endif()
 
-install(DIRECTORY launch
-        DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 
-install(TARGETS ${PROJECT_NAME}
-        DESTINATION lib/${PROJECT_NAME})
+install(TARGETS ${PROJECT_NAME} DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
