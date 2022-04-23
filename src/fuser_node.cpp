@@ -7,8 +7,6 @@
  * @date Apr 23, 2022
  */
 
-#include "realsense.hpp"
-#include "fuser.hpp"
 #include "fuser_ros2.hpp"
 
 using namespace std::chrono_literals;
@@ -32,7 +30,7 @@ FuserNode::FuserNode(ORB_SLAM2::System *pSLAM, RealSense *_realsense, float _cam
 #ifdef PX4
   vio_publisher_ = this->create_publisher<px4_msgs::msg::VehicleVisualOdometry>("VehicleVisualOdometry_PubSubTopic", 10);
 #endif
-  state_publisher_ = this->create_publisher<std_msgs::msg::Int32>("ORBS2State", state_qos);
+  state_publisher_ = this->create_publisher<std_msgs::msg::Int32>("FuserState", state_qos);
 
   // Create callback groups.
 #ifdef PX4
@@ -52,6 +50,10 @@ FuserNode::FuserNode(ORB_SLAM2::System *pSLAM, RealSense *_realsense, float _cam
 #endif
 
   firstReset = true;
+  orbPrevTs = -1;
+
+  fuser = new Fuser();
+
   // Activate timer for VIO publishing.
   // VIO: 10 ms period.
   vio_timer_ = this->create_wall_timer(10ms, std::bind(&FuserNode::timer_vio_callback, this), vio_clbk_group_);
@@ -76,40 +78,13 @@ void FuserNode::timestamp_callback(const px4_msgs::msg::Timesync::SharedPtr msg)
 #endif
 
 /**
- * @brief Setter method for pose member.
+ * @brief Conversion between poses method for fuser state member.
  *
- * @param _pose Pose data to store.
+ * @param orbPose ORBSLAM2 Pose to be converted.
+ * @param orbState ORBSLAM2 state to be propagated.
+ * @param rs2Pose rs2 pose result of the conversion.
  */
-void FuserNode::setPose(cv::Mat _pose)
-{
-  poseMtx.lock();
-  if (_pose.empty())
-  {
-    // SLAM lost tracking.
-    orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
-    RCLCPP_ERROR(this->get_logger(), "VSLAM tracking lost");
-  }
-  else
-  {
-    // Save latest pose.
-    orbslam2Pose = _pose;
-  }
-  poseMtx.unlock();
-}
-
-/**
- * @brief Setter method for ORB_SLAM2 state member.
- *
- * @param _state New internal state to set.
- */
-void FuserNode::setState(int32_t _state)
-{
-  stateMtx.lock();
-  orbslam2State = _state;
-  stateMtx.unlock();
-}
-
-void poseConversion(const HPose & orbPose, const unsigned int orbState, rs2_pose & rs2Pose) {
+void FuserNode::poseConversion(const ORB_SLAM2::HPose & orbPose, const unsigned int orbState, rs2_pose & rs2Pose) {
   rs2Pose.translation.x = orbPose.GetTranslation()[0];
   rs2Pose.translation.y = orbPose.GetTranslation()[1];
   rs2Pose.translation.z = orbPose.GetTranslation()[2];
@@ -121,13 +96,25 @@ void poseConversion(const HPose & orbPose, const unsigned int orbState, rs2_pose
   return;
 }
 
-void poseConversion(const rs2_pose & rs2Pose, Pose & pose) {
+/**
+ * @brief Conversion between poses method for fuser state member. Overloaded.
+ *
+ * @param rs2Pose rs2 pose to be converted.
+ * @param pose Pose result of the conversion.
+ */
+void FuserNode::poseConversion(const rs2_pose & rs2Pose, Pose & pose) {
   pose.setTranslation(rs2Pose.translation.x, rs2Pose.translation.y, rs2Pose.translation.z);
   pose.setRotation(rs2Pose.rotation.w, rs2Pose.rotation.x, rs2Pose.rotation.y, rs2Pose.rotation.z);
   pose.setAccuracy(rs2Pose.tracker_confidence);
 }
 
-void poseConversion(Pose & pose, rs2_pose & rs2Pose) {
+/**
+ * @brief Conversion between poses method for fuser state member. Overloaded.
+ *
+ * @param pose Pose to be converted.
+ * @param rs2Pose rs2 pose result of the conversion.
+ */
+void FuserNode::poseConversion(Pose & pose, rs2_pose & rs2Pose) {
   rs2Pose.translation.x = pose.getTranslation()[Pose::X];
   rs2Pose.translation.y = pose.getTranslation()[Pose::Y];
   rs2Pose.translation.z = pose.getTranslation()[Pose::Z];
@@ -143,7 +130,52 @@ void poseConversion(Pose & pose, rs2_pose & rs2Pose) {
  */
 void FuserNode::timer_vio_callback(void)
 {
-#ifdef PX4
+  //
+  // Sensor fusion ready to go!
+  //
+  realsense->run();
+  rs2_pose pose = realsense->getPose();
+
+  cv::Mat irMatrix    = realsense->getIRLeftMatrix();
+  cv::Mat depthMatrix = realsense->getDepthMatrix();
+
+  // ORBSLAM2 fails if it's running! We need to reset it.
+  if (!firstReset && mpSLAM->GetTrackingState() == ORB_SLAM2::Tracking::LOST) {
+    mpSLAM->Reset();
+  }
+
+  // Pass the IR Left and Depth frames to the SLAM system
+  ORB_SLAM2::HPose cameraPose = mpSLAM->TrackIRD(irMatrix, depthMatrix, realsense->getIRLeftTimestamp());
+  unsigned int ORBState = (mpSLAM->GetTrackingState() == ORB_SLAM2::Tracking::OK) ? 3 : 0;
+  rs2_pose orbPose;
+  poseConversion(cameraPose, ORBState, orbPose);
+
+  // The first time I receive a valid ORB-SLAM2 sample, I have to reset the T265 tracker.
+  if (!cameraPose.empty() && firstReset) {
+    realsense->resetPoseTrack();
+    realsense->run();
+    pose = realsense->getPose();
+    firstReset = false;
+  }
+
+  Pose _camPose, _orbPose, orbSyncedPose, fusedPose;
+  poseConversion(pose, _camPose);
+  poseConversion(orbPose, _orbPose);
+
+  // Sensor fusion
+  fuser->synchronizer(orbPrevTs, realsense->getIRLeftTimestamp(), realsense->getPoseTimestamp(), orbPrevPose, _orbPose, orbSyncedPose);
+  orbSyncedPose.setAccuracy(_orbPose.getAccuracy());
+  fuser->fuse(_camPose, orbSyncedPose);
+  fusedPose = fuser->getFusedPose();
+  RCLCPP_ERROR(this->get_logger(), "%g", fusedPose.getTranslation()[0]);
+
+  // Save the previous orb pose and timestamp
+  poseConversion(orbPose, orbPrevPose);
+  orbPrevTs = realsense->getIRLeftTimestamp();
+
+
+// #ifdef PX4
+#if 0
   uint64_t msg_timestamp = timestamp_.load(std::memory_order_acquire);
   px4_msgs::msg::VehicleVisualOdometry message{};
 
@@ -167,8 +199,6 @@ void FuserNode::timer_vio_callback(void)
   message.set__yawspeed(NAN);
   message.velocity_covariance[0] = NAN;
   message.velocity_covariance[15] = NAN;
-
-  poseMtx.lock();
 
   // Get the rest from the last stored pose.
   cv::Mat Rwc = orbslam2Pose.rowRange(0, 3).colRange(0, 3).t();
@@ -220,38 +250,13 @@ void FuserNode::timer_vio_callback(void)
     message.set__z(Twc.at<float>(1));
     message.q = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
   }
-  poseMtx.unlock();
 
   // Send it!
   vio_publisher_->publish(message);
 #endif
 
-  //
-  // WIP
-  //
-  realsense->run();
-  rs2_pose pose = realsense->getPose();
-
-  cv::Mat irMatrix    = realsense->getIRLeftMatrix();
-  cv::Mat depthMatrix = realsense->getDepthMatrix();
-
-  // ORBSLAM2 fails if it's running! We need to reset it.
-  if (!firstReset && mpSLAM->GetTrackingState() == ORB_SLAM2::Tracking::LOST) {
-    mpSLAM->Reset();
-  }
-
-  // Pass the IR Left and Depth frames to the SLAM system
-  ORB_SLAM2::HPose cameraPose = mpSLAM->TrackIRD(irMatrix, depthMatrix, realsense->getIRLeftTimestamp());
-  unsigned int ORBState = (mpSLAM->GetTrackingState() == ORB_SLAM2::Tracking::OK) ? 3 : 0;
-  rs2_pose orbPose;
-  //
-  // WIP ends here
-  //
-
   // Publish latest tracking state.
   std_msgs::msg::Int32 msg{};
-  stateMtx.lock();
-  msg.set__data(orbslam2State);
-  stateMtx.unlock();
+  msg.set__data(_camPose.getAccuracy());
   state_publisher_->publish(msg);
 }

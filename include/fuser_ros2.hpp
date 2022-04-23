@@ -20,6 +20,8 @@
 #include <opencv2/core/core.hpp>
 #include <ORB_SLAM2/System.h>
 #include "realsense.hpp"
+#include "fuser.hpp"
+#include "pose.hpp"
 
 /* Node names. */
 #define FUSERNAME "fuser_node"
@@ -41,8 +43,9 @@ class FuserNode : public rclcpp::Node
 public:
   FuserNode(ORB_SLAM2::System *pSLAM, RealSense *realsense, float camera_pitch);
 
-  void setPose(cv::Mat _pose);
-  void setState(int32_t _state);
+  void poseConversion(const ORB_SLAM2::HPose &, const unsigned int, rs2_pose &);
+  void poseConversion(const rs2_pose &, Pose &);
+  void poseConversion(Pose &, rs2_pose &);
 
 private:
   void timer_vio_callback(void);
@@ -53,17 +56,17 @@ private:
 
   rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr state_publisher_;
 
-  std::mutex poseMtx;
-  std::mutex stateMtx;
-
   ORB_SLAM2::System *mpSLAM;
-  int32_t orbslam2State = ORB_SLAM2::Tracking::eTrackingState::SYSTEM_NOT_READY;
-
-  cv::Mat orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
+  int32_t fuserState = Pose::trackQoS::LOST;
 
   RealSense *realsense;
 
   bool firstReset;
+
+  Pose orbPrevPose;
+  rs2_time_t orbPrevTs;
+
+  Fuser *fuser;
 
   float camera_pitch;
   float cp_sin_, cp_cos_;

@@ -52,13 +52,13 @@ int main(int argc, char **argv)
     // Create FuserNode.
     auto fuser_node_ptr = std::make_shared<FuserNode>(&SLAM, realsense, camera_pitch);
 
-// #ifdef SMT
-//     fuser_mt_executor.add_node(fuser_node_ptr);
-//     fuser_mt_executor.spin();
-// #else
-//     fuser_st_executor.add_node(fuser_node_ptr);
-//     fuser_st_executor.spin();
-// #endif
+#ifdef SMT
+    fuser_mt_executor.add_node(fuser_node_ptr);
+    fuser_mt_executor.spin();
+#else
+    fuser_st_executor.add_node(fuser_node_ptr);
+    fuser_st_executor.spin();
+#endif
 
     // Done!
     rclcpp::shutdown();
