@@ -19,6 +19,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core/core.hpp>
 #include <ORB_SLAM2/System.h>
+#include "realsense.hpp"
 
 /* Node names. */
 #define FUSERNAME "fuser_node"
@@ -38,7 +39,7 @@
 class FuserNode : public rclcpp::Node
 {
 public:
-  FuserNode(ORB_SLAM2::System *pSLAM, float camera_pitch);
+  FuserNode(ORB_SLAM2::System *pSLAM, RealSense *realsense, float camera_pitch);
 
   void setPose(cv::Mat _pose);
   void setState(int32_t _state);
@@ -60,7 +61,11 @@ private:
 
   cv::Mat orbslam2Pose = cv::Mat::eye(4, 4, CV_32F);
 
-  float camera_pitch_;
+  RealSense *realsense;
+
+  bool firstReset;
+
+  float camera_pitch;
   float cp_sin_, cp_cos_;
 
 #ifdef PX4

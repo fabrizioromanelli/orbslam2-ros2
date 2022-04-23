@@ -50,7 +50,7 @@ int main(int argc, char **argv)
     std::cout << "ROS 2 executor initialized" << std::endl;
 
     // Create FuserNode.
-    auto fuser_node_ptr = std::make_shared<FuserNode>(&SLAM, camera_pitch);
+    auto fuser_node_ptr = std::make_shared<FuserNode>(&SLAM, realsense, camera_pitch);
 
 // #ifdef SMT
 //     fuser_mt_executor.add_node(fuser_node_ptr);
