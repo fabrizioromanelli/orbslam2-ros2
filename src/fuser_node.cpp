@@ -167,15 +167,12 @@ void FuserNode::timer_vio_callback(void)
   orbSyncedPose.setAccuracy(_orbPose.getAccuracy());
   fuser->fuse(_camPose, orbSyncedPose);
   fusedPose = fuser->getFusedPose();
-  RCLCPP_ERROR(this->get_logger(), "%g", fusedPose.getTranslation()[0]);
 
   // Save the previous orb pose and timestamp
   poseConversion(orbPose, orbPrevPose);
   orbPrevTs = realsense->getIRLeftTimestamp();
 
-
-// #ifdef PX4
-#if 0
+#ifdef PX4
   uint64_t msg_timestamp = timestamp_.load(std::memory_order_acquire);
   px4_msgs::msg::VehicleVisualOdometry message{};
 
@@ -201,25 +198,12 @@ void FuserNode::timer_vio_callback(void)
   message.velocity_covariance[15] = NAN;
 
   // Get the rest from the last stored pose.
-  cv::Mat Rwc = orbslam2Pose.rowRange(0, 3).colRange(0, 3).t();
-  cv::Mat Twc = -Rwc * orbslam2Pose.rowRange(0, 3).col(3);
-
-  Eigen::Matrix3f orMat;
-  orMat(0, 0) = orbslam2Pose.at<float>(0, 0);
-  orMat(0, 1) = orbslam2Pose.at<float>(0, 1);
-  orMat(0, 2) = orbslam2Pose.at<float>(0, 2);
-  orMat(1, 0) = orbslam2Pose.at<float>(1, 0);
-  orMat(1, 1) = orbslam2Pose.at<float>(1, 1);
-  orMat(1, 2) = orbslam2Pose.at<float>(1, 2);
-  orMat(2, 0) = orbslam2Pose.at<float>(2, 0);
-  orMat(2, 1) = orbslam2Pose.at<float>(2, 1);
-  orMat(2, 2) = orbslam2Pose.at<float>(2, 2);
-  Eigen::Quaternionf q_orb(orMat);
-
   // Conversion from VSLAM to NED is: [x y z]ned = [z x y]vslam.
   // Quaternions must follow the Hamiltonian convention.
   if (camera_pitch != 0.0f)
   {
+    // TODO: With different camera pitch is to be implemented yet!
+    #if 0
     // Correct orientation: rotate around camera axes in NED body frame.
     Eigen::Quaternionf q_orb_ned = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
     auto orb_ned_angles = q_orb_ned.toRotationMatrix().eulerAngles(0, 1, 2);
@@ -242,13 +226,12 @@ void FuserNode::timer_vio_callback(void)
     message.set__x(cp_cos_ * Twc.at<float>(2) - cp_sin_ * Twc.at<float>(1));
     message.set__y(Twc.at<float>(0));
     message.set__z(cp_sin_ * Twc.at<float>(2) + cp_cos_ * Twc.at<float>(1));
-  }
-  else
-  {
-    message.set__x(Twc.at<float>(2));
-    message.set__y(Twc.at<float>(0));
-    message.set__z(Twc.at<float>(1));
-    message.q = {q_orb.w(), -q_orb.z(), -q_orb.x(), -q_orb.y()};
+    #endif
+  } else {
+    message.set__x(fusedPose.getTranslation()[0]);
+    message.set__y(fusedPose.getTranslation()[1]);
+    message.set__z(fusedPose.getTranslation()[2]);
+    message.q = {(float)fusedPose.getRotation().w(), (float)fusedPose.getRotation().x(), (float)fusedPose.getRotation().y(), (float)fusedPose.getRotation().z()};
   }
 
   // Send it!
