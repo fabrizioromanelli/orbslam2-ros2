@@ -5,7 +5,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Default build type: Release" FORCE)
 endif()
 
-project(fuser)
+project(orbslam2)
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
